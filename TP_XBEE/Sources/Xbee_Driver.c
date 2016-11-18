@@ -156,8 +156,10 @@ xbee_rx_frame createRxFrame(uint8_t *raw_data, uint8_t data_length)
 	xbee_rx_frame_header header = createRxHeader(address);
 	header.options = raw_data[14];
 	rxFrame.rx_header = header;
-	rxFrame.payload_size = data_length;
-	for(int i = 0; i < data_length; i++) {
+	rxFrame.payload_size = data_length - RX_HEADER_LENGTH;
+
+	// Get payload
+	for(int i = 0; i < rxFrame.payload_size; i++) {
 		rxFrame.payload[i] = raw_data[i+15];
 	}
 	for (int i = 0; i < data_length; i++) {

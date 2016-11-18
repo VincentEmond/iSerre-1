@@ -13,6 +13,7 @@
 #include "console.h"
 #include "Xbee_Driver.h"
 #include "fifo_buffer.h"
+#include "inttypes.h"
 
 struct Fifo fifo_xbee;
 uint8_t xb_rxBuff[1];

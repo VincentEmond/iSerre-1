@@ -26,7 +26,7 @@ void afficher_chaine_buffer(char *buffer, uint8_t buffer_length, int retourLigne
 }
 
 void afficher_hex(char *chaine, int retourLigne) {
-	debug_printf("%hhX", chaine);
+	debug_printf("%X", chaine);
 
 	if(retourLigne)
 		debug_printf("\n");

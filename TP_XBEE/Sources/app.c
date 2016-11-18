@@ -105,28 +105,32 @@ void afficher_derniere_reception()
 
 	uint8_t trame_brute[XB_PAYLOAD_MAX_SIZE] = {0};
 
-	// Recuperer le contenu du fifo_buffer -> la trame brute
-	lire_contenu_fifo(&fifo_xbee, trame_brute);
-
 	int data_length = 0;
 	if(fifo_xbee.end > fifo_xbee.begin) {
-		data_length = fifo_xbee.end - fifo_xbee.begin + 1;
+		data_length = fifo_xbee.end - fifo_xbee.begin;
 	}
 	else if (fifo_xbee.begin == fifo_xbee.end) {
 		afficher_chaine("Buffer de reception vide. \n", 1);
 		return;
 	}
 	else {
-		data_length = FIFO_SIZE - (fifo_xbee.begin - fifo_xbee.end) + 1;
+		data_length = FIFO_SIZE - (fifo_xbee.begin - fifo_xbee.end);
 	}
+
+	// Recuperer le contenu du fifo_buffer -> la trame brute
+	lire_contenu_fifo(&fifo_xbee, trame_brute);
 
 	xbee_rx_frame trame_formee = createRxFrame(trame_brute, data_length);
 	afficher_chaine("Derniere trame recue: ", 1);
 	afficher_chaine("\tAdresse : ", 0);
-	afficher_hex(trame_formee.rx_header.source_address, 1);
-	afficher_chaine("\tMessage : ", 1);
+	uint64_t adresse = trame_formee.rx_header.source_address;
+	//uint32_t high = adresse >> 32;
+	//uint32_t low = adresse;
+	debug_printf("%X", (uint32_t)(adresse>>32));
+	debug_printf("%X\n", (uint32_t)(adresse));
+	afficher_chaine("\tMessage : ", 0);
 	for(int i = 0; i < trame_formee.payload_size; i++) {
-		debug_printf(trame_formee.payload[i]);
+		debug_printf("%c", trame_formee.payload[i]);
 	}
 
 	afficher_chaine("\n", 1);
@@ -138,7 +142,7 @@ void afficher_menu()
 	afficher_chaine("Communication entre modules Xbee..", 1);
 	afficher_chaine("1. Envoyer message", 1);
 	afficher_chaine("2. Diffuser message", 1);
-	afficher_chaine("3. Recevoir message", 1);
+	afficher_chaine("3. Afficher derniere reception", 1);
 }
 void lire_reponse()
 {

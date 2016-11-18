@@ -7,7 +7,7 @@
 **     Version     : Component 1.3.0, Driver 01.00, CPU db: 3.00.000
 **     Repository  : KSDK 1.3.0
 **     Compiler    : GNU C Compiler
-**     Date/Time   : 2016-11-11, 17:51, # CodeGen: 46
+**     Date/Time   : 2016-11-14, 14:11, # CodeGen: 49
 **
 **     Copyright : 1997 - 2015 Freescale Semiconductor, Inc. 
 **     All Rights Reserved.
@@ -56,7 +56,7 @@
 
 /*! uart_xb configuration structure */
 const uart_user_config_t uart_xb_InitConfig0 = {
-  .baudRate = 57600U,
+  .baudRate = 9600U,
   .parityMode = kUartParityDisabled,
   .stopBitCount = kUartOneStopBit,
   .bitCountPerChar = kUart8BitsPerChar,

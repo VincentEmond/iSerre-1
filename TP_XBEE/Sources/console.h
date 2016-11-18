@@ -10,6 +10,7 @@
 
 #include "DbgCs1.h"
 
+
 int echo_true = 1;
 
 void afficher_chaine(char* chaine, int retourLigne);
