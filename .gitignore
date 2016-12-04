@@ -1,17 +1,31 @@
+# Eclipse worskpace files
+/.metadata/
+*.lock
+*.log
+
 # Eclipse project files
-/.cproject
-/.project
+/MQTT-SN-Client/.settings/
+*.cproject
+*.project
 
 # KDS files
-/*.g_c
-/*.g_x
-/.cwGeneratedFileSetLog
-/ProjectInfo.xml
+*.g_c
+*.g_x
+*.launch
+*.cwGeneratedFileSetLog
+ProjectInfo.xml
 
 # KDS folders
-/Debug/
-/Documentation/
-/Generated_Code/
+Debug/
+Documentation/
+Generated_Code/
+
+# C/C++ compiled files
+*.mk
+*.o
+*.elf
+
+
 
 
 
