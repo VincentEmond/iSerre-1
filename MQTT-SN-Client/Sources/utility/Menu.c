@@ -8,7 +8,7 @@
 #include "Menu.h"
 #include <string.h>
 #include "Terminal.h"
-//#include "Console.h"
+#include "fsl_debug_console.h"
 
 typedef struct Menu_item_s
 {
