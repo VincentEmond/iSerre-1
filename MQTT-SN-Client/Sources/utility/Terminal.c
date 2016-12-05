@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 // Add user include here
-//#include "Console.h"
+#include "UART_Com0.h"
 
 #define STRING_TO_U32_BUFFER_SIZE 20U
 

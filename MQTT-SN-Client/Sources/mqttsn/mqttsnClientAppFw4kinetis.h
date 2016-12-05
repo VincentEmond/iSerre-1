@@ -104,6 +104,7 @@ public:
 	void stopWdt();
 	int  run();
 
+	Network* getNetwork() { return _mqttsn.getNetwork(); }
 
 private:
 	MqttsnClient _mqttsn;

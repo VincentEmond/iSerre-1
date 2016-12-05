@@ -4,9 +4,6 @@
 *.log
 
 # Eclipse project files
-/MQTT-SN-Client/.settings/
-*.cproject
-*.project
 
 # KDS files
 *.g_c
