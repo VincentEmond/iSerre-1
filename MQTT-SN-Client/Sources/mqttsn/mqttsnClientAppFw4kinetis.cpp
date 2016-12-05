@@ -112,6 +112,11 @@ int MqttsnClientApplication::run(){
 	return 0;
 }
 
+Network* MqttsnClientApplication::getNetwork()
+{
+	 return _mqttsn.getNetwork();
+}
+
 
 void MqttsnClientApplication::initialize(APP_CONFIG config){
 	_mqttsn.initialize(config);

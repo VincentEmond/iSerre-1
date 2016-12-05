@@ -236,6 +236,11 @@ uint8_t MqttsnClient::getMsgRequestCount(){
   return _sendQ->getCount();
 }
 
+Network* MqttsnClient::getNetwork()
+{
+	return _network;
+}
+
 void MqttsnClient::setMsgRequestStatus(uint8_t stat){
     _sendQ->setStatus(0,stat);
 }

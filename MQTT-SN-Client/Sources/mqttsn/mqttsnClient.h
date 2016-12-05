@@ -213,8 +213,7 @@ public:
     int readPacket();
     uint8_t getMsgRequestCount();
 
-    Network* getNetwork() { return _network; }
-
+    Network* getNetwork();
 private:
     int  sendRecvMsg();
     void clearMsgRequest();
