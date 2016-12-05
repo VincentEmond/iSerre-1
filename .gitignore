@@ -22,7 +22,8 @@ Generated_Code/
 *.o
 *.elf
 
-
+# Miscellaneous
+*.bak
 
 
 
