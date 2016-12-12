@@ -84,6 +84,22 @@ void UART_Com2_TxCallback(uint32_t instance, void * uartState)
   /* Write your code here ... */
 }
 
+/*
+** ===================================================================
+**     Callback    : UART_Com1_TxCallback
+**     Description : This callback occurs when data are transmitted.
+**     Parameters  :
+**       instance - The UART instance number.
+**       uartState - A pointer to the UART driver state structure
+**       memory.
+**     Returns : Nothing
+** ===================================================================
+*/
+void UART_Com1_TxCallback(uint32_t instance, void * uartState)
+{
+  /* Write your code here ... */
+}
+
 /* END Events */
 
 #ifdef __cplusplus

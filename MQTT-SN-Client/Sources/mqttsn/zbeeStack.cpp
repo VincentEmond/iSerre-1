@@ -77,7 +77,7 @@
 #endif /* LINUX */
 
 #ifdef KINETIS
-		#include "UART_Com2.h"
+		//#include "UART_Com2.h"
 
 #endif /* KINETIS */
 
@@ -230,32 +230,35 @@ void SerialPort::flush(void){
 /**
  *  For KINETIS
  */
-static uart_user_config_t UART_Com2_config; // declare current UART_Com1 config. It may differ from UART_Com2_initConfig defined by ProcessorExpert
+#define XBEE_PACKETIZATION_TIMEOUT (5u)
 
-static uint8_t UART_Com2_RxBuffer[1] = {0}; // declare a single byte for UART2 RxBuffer. Array is not necessary
-
-static uint8_t UART_Com2_delay = 5; // necessary to respect the xbee packetization timeout (minimum 3 characters)
-
-static void UART_Com2_RxCallback(uint32_t instance, void* state)
+static void UART_RxCallback(uint32_t instance, void* state)
 {
 	SerialPort* serial = (SerialPort*)((uart_state_t*)state)->rxCallbackParam;
 	serial->setBuff();
 }
 
-SerialPort::SerialPort()
+SerialPort::SerialPort(uint32_t instance, const uart_user_config_t* config, uart_state_t* state)
 {
+	_instance = instance;
+
 	// init to a known state
-	UART_Com2_config.baudRate 			= UART_Com2_initConfig.baudRate;
-	UART_Com2_config.bitCountPerChar 	= UART_Com2_initConfig.bitCountPerChar;
-	UART_Com2_config.parityMode 		= UART_Com2_initConfig.parityMode;
-	UART_Com2_config.stopBitCount 		= UART_Com2_initConfig.stopBitCount;
-	UART_DRV_Init(UART_Com2_IDX, &UART_Com2_state, &UART_Com2_config);
+
+	_config.baudRate 			= config->baudRate;
+	_config.bitCountPerChar 	= config->bitCountPerChar;
+	_config.parityMode 			= config->parityMode;
+	_config.stopBitCount 		= config->stopBitCount;
+
+	_state = state;
+
+	UART_DRV_Init(_instance, _state, &_config);
+
 	_begin = _end = _size = 0;
 }
 
 void SerialPort::setBuff(void)
 {
-	_data[_end] = UART_Com2_state.rxBuff[0]; // read the incoming byte
+	_data[_end] = _state->rxBuff[0]; // read the incoming byte
 	_size++;
 
 	_end++;
@@ -265,14 +268,17 @@ void SerialPort::setBuff(void)
 
 int SerialPort::open(XBeeConfig config)
 {
-	UART_DRV_Deinit(UART_Com2_IDX);
-	UART_Com2_config.baudRate 			= config.baudrate;
-	UART_Com2_config.bitCountPerChar 	= kUart8BitsPerChar;
-	UART_Com2_config.parityMode 		= kUartParityDisabled;
-	UART_Com2_config.stopBitCount 		= kUartOneStopBit;
-	UART_DRV_Init(UART_Com2_IDX, &UART_Com2_state, &UART_Com2_config);
-	UART_DRV_InstallRxCallback(UART_Com2_IDX, UART_Com2_RxCallback, UART_Com2_RxBuffer, (void*)this, true);
+	UART_DRV_Deinit(_instance);
+	_config.baudRate 			= config.baudrate;
+	_config.bitCountPerChar 	= kUart8BitsPerChar;
+	_config.parityMode 			= kUartParityDisabled;
+	_config.stopBitCount 		= kUartOneStopBit;
+	UART_DRV_Init(_instance, _state, &_config);
+
+	UART_DRV_InstallRxCallback(_instance, UART_RxCallback, _buffer, (void*)this, true);
+
 	_begin = _end = _size = 0;
+
 	return 0;
 }
 
@@ -283,8 +289,8 @@ bool SerialPort::checkRecvBuf()
 
 bool SerialPort::send(unsigned char b)
 {
-	OSA_TimeDelay(UART_Com2_delay * (int)(10. / UART_Com2_config.baudRate) );
-	if(UART_DRV_SendData(UART_Com2_IDX, &b, 1) == kStatus_UART_Success)
+	OSA_TimeDelay(XBEE_PACKETIZATION_TIMEOUT * (int)(10. / _config.baudRate) );
+	if(UART_DRV_SendData(_instance, &b, 1) == kStatus_UART_Success)
 		return true;
 	else
 		return false;
@@ -651,8 +657,9 @@ void NWRequest::setPayloadLength(uint8_t payLoadLength){
               Class  Network
  ============================================*/
 
-Network::Network(){
-    _serialPort = new SerialPort();
+Network::Network(uint32_t instance, const uart_user_config_t* config, uart_state_t* state){
+
+	_serialPort = new SerialPort(instance, config, state);
     _rxCallbackPtr = 0;
     _returnCode = 0;
     _response.setFrameDataPtr(_responsePayload);

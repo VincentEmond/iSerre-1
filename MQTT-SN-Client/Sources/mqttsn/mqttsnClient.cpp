@@ -71,6 +71,8 @@
 #ifdef KINETIS
   #include <time.h>
   #include <string.h>
+  #include "UART_Com2.h"
+#include "UART_Com1.h"
 #endif
 
 using namespace std;
@@ -100,7 +102,8 @@ void ResponseHandler(NWResponse* resp, int* returnCode){
 }
 
 MqttsnClient::MqttsnClient(){
-    _network = new Network();
+    _network = new Network(UART2_IDX, &UART_Com2_initConfig, &UART_Com2_state);
+    //_network = new Network(UART1_IDX, &UART_Com1_initConfig, &UART_Com1_state);
     _network->setRxHandler(ResponseHandler);
     _sendQ = new SendQue();
     _duration = 0;

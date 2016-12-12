@@ -79,6 +79,7 @@
 
 #ifdef KINETIS
 	#include <stdlib.h>
+	#include "fsl_uart_driver.h"
 	#define SERIAL_PORT_FIFO_SIZE (128u)
 #endif
 
@@ -320,7 +321,7 @@ private:
  --------------------------*/
 class SerialPort{
 public:
-    SerialPort( );
+    SerialPort(uint32_t instance, const uart_user_config_t* config, uart_state_t* state);
     int  open(XBeeConfig config);
     bool send(unsigned char b);
     bool recv(unsigned char* b);
@@ -333,6 +334,11 @@ private:
 	int _begin;				// index of first element
 	int _end;				// index of past-the-last element
 	size_t _size;
+
+	uint32_t _instance;
+	uart_user_config_t _config;
+	uart_state_t *_state;
+	uint8_t _buffer[1]; // declare a single byte for UARTx RxBuffer. Array is not necessary
 };
 #endif /* KINETIS */
 
@@ -341,7 +347,7 @@ private:
  ============================================*/
 class Network {
 public:
-    Network();
+    Network(uint32_t instance, const uart_user_config_t* config, uart_state_t* state);
     ~Network();
 
     void send(uint8_t* xmitData, uint8_t dataLen, SendReqType type);

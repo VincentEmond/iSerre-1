@@ -36,6 +36,7 @@
 #include "PIT_Timer0.h"
 #include "UART_Com2.h"
 #include "UART_Com0.h"
+#include "UART_Com1.h"
 #include "utility/StringUtility.h"
 #if CPU_INIT_CONFIG
   #include "Init_Config.h"
