@@ -26,7 +26,7 @@ XBeeAppConfig theAppConfig = {
 		0               //Device (for linux App)
 	},
 	{
-		"Noeud6",       //NodeId
+		"Noeud-CH",       //NodeId
 		300,           //KeepAlive (sec)
 		false,          //Clean session
 		false,          //EndDevice
@@ -37,7 +37,53 @@ XBeeAppConfig theAppConfig = {
 /*------------------------------------------------------
  *             Create Topic
  *------------------------------------------------------*/
-MQString* topic1 = new MQString("tp1");
+MQString* TOPIC_TEMP_CAPTEUR = new MQString("iserre/temperature/capteur");
+MQString* TOPIC_TEMP_ACTION = new MQString("iserre/temperature/actionneur");
+MQString* TOPIC_TEMP_CONFIG = new MQString("iserre/temperature/config");
+
+MQString* TOPIC_HUMID_CAPTEUR = new MQString("iserre/humidite/capteur");
+MQString* TOPIC_HUMID_ACTION = new MQString("iserre/humidite/actionneur");
+MQString* TOPIC_HUMID_CONFIG = new MQString("iserre/humidite/config");
+
+MQString* TOPIC_LUMIERE_CONFIG = new MQString("iserre/lumiere/config");
+
+
+
+/*  Logique sink temperature*/
+
+	/** Cote MQTT : Souscriptions **
+	 * TOPIC_TEMP_CONFIG : chaque fois qu'un msg est publié enregistrer la config dans var. configCourante;
+	 * TOPIC_TEMP_ACTION : chaque fois qu'un msg est publié, envoyer une trame iSN_FrameCommand aux actionneurs.
+
+	 */
+
+	// Deux tâches principales, la premiere ne fait que publier periodiquement (selon configCourante) la var. lastTemp
+
+	/* Tache 1 : Publier sur TOPIC_TEMP_CAPTEUR la dernière moyenne calculée
+	 *
+	 * Envoyer un iSN_FrameCommand avec valeur 2 (demande mesure) à tous les noeuds capteur
+	 *
+	 */
+
+
+	/* Tache 2 : Gestion noeuds iSN */
+	/** Boucle principale
+		Verifier buffer de reception Xbee_iSN
+		Si iSN_FrameSearchSink trouvé
+			Enregistrer adresse du noeud émetteur
+			Envoyer trame iSN_FrameConfig au noeud émetteur
+		Si iSN_FrameMeasure trouvé
+			incrémenter compteur de trame de donnees recues : (int) valeurRecues++;
+			enregistrer valeur dans tabValeurs[];
+			si (valeurRecues == valeurDeMoyenne)
+				lastTemp = 0;
+				for (valeur dans tabValeurs):
+					lastTemp += valeur
+				lastTemp = lastTemp / valeurDeMoyenne
+
+	**/
+
+
 
 
 /*------------------------------------------------------
@@ -45,20 +91,16 @@ MQString* topic1 = new MQString("tp1");
  *------------------------------------------------------*/
 bool led_flg = false;
 
-int task1(){
-	if(led_flg){
-		PUBLISH(topic1, "off", 3, QOS1);
-		led_flg = false;
-	}else{
-		PUBLISH(topic1, "on", 2, QOS1);
-		led_flg = true;
-	}
-	return 0;
+int publier_moyenne(){
+
+
+
 }
+
 
 /*---------  Link Tasks to the Application ----------*/
 TASK_LIST = {
-	{task1, 5},
+	{task1, 1},
 END_OF_TASK_LIST};
 
 /*------------------------------------------------------

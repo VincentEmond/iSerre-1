@@ -18,8 +18,8 @@
  */
 typedef enum
 {
-	iSN_FrameType_SearchSync 	= 0x01,
-	iSN_FrameType_Config 		= 0x02,
+	iSN_FrameType_SearchSink 	= 0x01,
+	iSN_FrameType_SearchAck 		= 0x02,
 	iSN_FrameType_Command 		= 0x03,
 	iSN_FrameType_Measure 		= 0x04
 
@@ -40,16 +40,27 @@ typedef enum
 } iSN_DeviceType;
 
 
+typedef enum
+{
+	// Sensor/actuator statuses
+	iSN_Status_SearchingSink = 0x1,
+	iSN_Status_Sleeping = 0x2,
+
+} iSN_Status;
+
+
+/*
+ *
+ */
+
 /*
  *
  */
 typedef struct
 {
 	uint8_t type;
-	uint16_t value;
-
-} iSN_Config;
-
+	uint8_t value;
+} iSN_FrameSearchAck;
 
 /*
  *
@@ -59,19 +70,7 @@ typedef struct
 	uint8_t frameType;
 	uint8_t deviceType;
 
-} iSN_FrameSearchSync;
-
-
-/*
- *
- */
-typedef struct
-{
-	uint8_t frameType;
-	uint8_t count;
-	iSN_Config configList[ISN_CONFIG_COUNT_MAX];
-
-} iSN_FrameConfig;
+} iSN_FrameSearchSink;
 
 
 /*
