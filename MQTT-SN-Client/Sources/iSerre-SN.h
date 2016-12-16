@@ -99,16 +99,9 @@ typedef struct
 extern "C" {
 #endif
 
-void convertFloat2Buffer(const float f, uint8_t* buffer)
-{
-	for(int i = 0 ; i < sizeof(float) ; i++)
-		buffer[i] = ((uint8_t*)&pi)[i];
-}
+void convertFloat2Buffer(const float f, uint8_t* buffer);
 
-void convertBuffer2Float(const uint8_t* buffer, float* f)
-{
-	*f = *((float*)buffer);
-}
+void convertBuffer2Float(const uint8_t* buffer, float* f);
 
 #ifdef __cplusplus
 }
