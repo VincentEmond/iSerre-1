@@ -9,6 +9,11 @@
 
 #ifdef KINETIS
 #include "mqttsn/mqttsnClientAppFw4kinetis.h"
+#include "mqttsn/zbeeStack.h"
+#include "UART_Com1.h"
+#include "iSerre-SN.h"
+#include "SinkMeasureManager.h"
+#include "utility/StringUtility.h"
 #include <string.h>
 
 using namespace std;
@@ -34,6 +39,9 @@ XBeeAppConfig theAppConfig = {
 		0   			//WillMessage or 0   DO NOT USE 0 STRING!
 	}
  };
+
+Network network(UART1_IDX, &UART_Com1_initConfig, &UART_Com1_state);
+
 /*------------------------------------------------------
  *             Create Topic
  *------------------------------------------------------*/
@@ -83,24 +91,45 @@ MQString* TOPIC_LUMIERE_CONFIG = new MQString("iserre/lumiere/config");
 
 	**/
 
+#define DEFAULT_MEASURE_NUMBER (4u)
 
+SinkMeasureManager measMgr(DEFAULT_MEASURE_NUMBER);
 
+void networkRxCallback(NWResponse* data, int* returnCode)
+{
+	if(data->getPayload(0) == iSN_FrameType_Measure)
+	{
+		float meas = 0.f;
+		convertBuffer2Float(&data->getPayload()[1], &meas);
+		debug_printf("measure = %.2f\n\r", meas);
+
+		measMgr.addMeasure(meas);
+	}
+	network.readPacket();
+}
 
 /*------------------------------------------------------
  *             Tasks invoked by Timer
  *------------------------------------------------------*/
-bool led_flg = false;
+int readFrame(){
+	debug_printf("reading...\n\r");
+	network.readPacket();
+	debug_printf("done\n\r");
 
-int publier_moyenne(){
+	if(measMgr.isAverageDone())
+	{
+		char str[20] = {0};
+		ftoa(measMgr.getAverage(), str, 2);
+		PUBLISH(TOPIC_TEMP_CAPTEUR, str, strlen(str), QOS1);
+	}
 
-
-
+	return 0;
 }
 
 
 /*---------  Link Tasks to the Application ----------*/
 TASK_LIST = {
-	{task1, 1},
+	{readFrame, 10},
 END_OF_TASK_LIST};
 
 /*------------------------------------------------------
@@ -118,14 +147,16 @@ int  blinkIndicator(MqttsnPublish* msg){
 }
 /*-------------- Link Tasks to Topic -------------------*/
 SUBSCRIBE_LIST = {
-	{topic1, blinkIndicator, QOS1},
+	//{topic1, blinkIndicator, QOS1},
 END_OF_SUBSCRIBE_LIST};
 
 /*==================================================
  *      Application setup
  *=================================================*/
  void setup(){
-    // nop
+	 debug_printf("start\n\r");
+	 network.initialize(theAppConfig.netCfg);
+	 network.setRxHandler(networkRxCallback);
  }
 
 #endif

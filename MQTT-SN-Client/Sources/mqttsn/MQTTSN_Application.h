@@ -65,9 +65,9 @@
 /*======================================
  *         Debug Flag
  ======================================*/
-#define NW_DEBUG
-#define MQTTSN_DEBUG
-#define DEBUG
+//#define NW_DEBUG
+//#define MQTTSN_DEBUG
+//#define DEBUG
 
 
 /****************************************
@@ -199,10 +199,10 @@ typedef struct {
 	#endif
 #else
 	#ifdef NW_DEBUG
-		#define D_NWSTACKF(...)    PRINTF(__VA_ARGS__)
-		#define D_NWSTACKW(...)    PRINTF(__VA_ARGS__)
+		#define D_NWSTACKF(...)    //PRINTF(__VA_ARGS__)
+		#define D_NWSTACKW(...)    //PRINTF(__VA_ARGS__)
 		#define D_NWSTACKLN(...)
-		#define D_NWSTACK(...)     PRINTF(__VA_ARGS__)
+		#define D_NWSTACK(...)     //PRINTF(__VA_ARGS__)
 	#else
 		#define D_NWSTACK(...)
 		#define D_NWSTACKLN(...)
@@ -210,8 +210,8 @@ typedef struct {
 		#define D_NWSTACKF(...)
 	#endif
 	#ifdef MQTTSN_DEBUG
-		#define D_MQTTF(...)    PRINTF(__VA_ARGS__)
-		#define D_MQTTW(...)    PRINTF("%s",__VA_ARGS__)
+		#define D_MQTTF(...)    //PRINTF(__VA_ARGS__)
+		#define D_MQTTW(...)    //PRINTF("%s",__VA_ARGS__)
 		#define D_MQTTLN(...)
 		#define D_MQTT(...)
 	#else

@@ -80,7 +80,7 @@
 #ifdef KINETIS
 	#include <stdlib.h>
 	#include "fsl_uart_driver.h"
-	#define SERIAL_PORT_FIFO_SIZE (128u)
+	#define SERIAL_PORT_FIFO_SIZE (1024u)
 #endif
 
 
