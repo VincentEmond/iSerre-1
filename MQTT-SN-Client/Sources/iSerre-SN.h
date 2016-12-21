@@ -20,7 +20,7 @@ typedef enum
 {
 	iSN_FrameType_SearchSink 	= 0x01,
 	iSN_FrameType_SearchAck 		= 0x02,
-	iSN_FrameType_Command 		= 0x03,
+	iSN_FrameType_Command 		= 0xC3,
 	iSN_FrameType_Measure 		= 0x04
 
 } iSN_FrameType;

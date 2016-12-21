@@ -353,6 +353,7 @@ public:
     void send(uint8_t* xmitData, uint8_t dataLen, SendReqType type);
     int  readPacket(uint8_t type = 0);
     void setGwAddress();
+    void setGwAddress(NWAddress64& addr);
     void resetGwAddress(void);
     void setRxHandler(void (*callbackPtr)(NWResponse* data, int* returnCode));
     int  initialize(XBeeConfig  config);

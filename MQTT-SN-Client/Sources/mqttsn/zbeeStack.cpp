@@ -718,6 +718,12 @@ void Network::setGwAddress(){
     _gwAddress16 = getRxRemoteAddress16();
 }
 
+void Network::setGwAddress(NWAddress64& addr){
+	_gwAddress64.setMsb(addr.getMsb());
+	_gwAddress64.setLsb(addr.getLsb());
+	_gwAddress16 = uint16_t(addr.getLsb() & 0xFFFF);
+}
+
 void Network::resetGwAddress(void){
     _gwAddress64.setMsb(0);
     _gwAddress64.setLsb(0);
