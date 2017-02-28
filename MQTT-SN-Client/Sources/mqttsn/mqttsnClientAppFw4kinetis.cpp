@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "iSN/iSN.h"
 
 using namespace std;
 using namespace tomyClient;
@@ -60,6 +61,9 @@ extern void  setup();
 =========================================*/
 int mqttsnClientAppMain()
 {
+
+	iSN_Start();
+
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);
 	theApplication->setClean(theAppConfig.mqttsnCfg.cleanSession);
 	if(theAppConfig.mqttsnCfg.willTopic){

@@ -1,10 +1,10 @@
 /* ###################################################################
 **     Filename    : main.c
-**     Project     : MQTT-SN
+**     Project     : MQTT-SN-Client
 **     Processor   : MKL26Z128VLH4
 **     Version     : Driver 01.01
 **     Compiler    : GNU C Compiler
-**     Date/Time   : 2016-10-31, 19:27, # CodeGen: 0
+**     Date/Time   : 2017-02-27, 20:36, # CodeGen: 4
 **     Abstract    :
 **         Main module.
 **         This module contains user's application code.
@@ -44,7 +44,6 @@
 /* User includes (#include below this line is not maintained by Processor Expert) */
 #include "mqttsn/MQTTSN_Application.h"
 #include "mqttsn_client_c_interface.h"
-
 /*lint -save  -e970 Disable MISRA rule (6.3) checking. */
 int main(void)
 /*lint -restore Enable MISRA rule (6.3) checking. */
@@ -56,7 +55,8 @@ int main(void)
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
-  mqttsnClientAppMain();
+    mqttsnClientAppMain();
+  /* For example: for(;;) { } */
 
   /*** Don't write any code pass this line, or it will be deleted during code generation. ***/
   /*** RTOS startup code. Macro PEX_RTOS_START is defined by the RTOS component. DON'T MODIFY THIS CODE!!! ***/

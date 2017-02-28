@@ -36,9 +36,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define PRINTF_FLOAT_ENABLE   1
-#define PRINT_MAX_COUNT       1
-#define SCANF_FLOAT_ENABLE    1
+//#define PRINTF_FLOAT_ENABLE   1
+//#define PRINT_MAX_COUNT       1
+//#define SCANF_FLOAT_ENABLE    1
 
 #ifndef HUGE_VAL
 #define HUGE_VAL         (99.e99)///wrong value
