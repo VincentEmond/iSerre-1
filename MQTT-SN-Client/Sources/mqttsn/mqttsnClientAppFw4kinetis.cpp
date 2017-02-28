@@ -45,11 +45,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "iSN/iSN.h"
+#include "receiveHandler.cpp"
 
 using namespace std;
 using namespace tomyClient;
 
 MqttsnClientApplication* theApplication = new MqttsnClientApplication();
+
+
 
 extern TaskList theTaskList[];
 extern OnPublishList theOnPublishList[];
@@ -62,7 +65,10 @@ extern void  setup();
 int mqttsnClientAppMain()
 {
 
-	iSN_Start();
+
+	//iSN_Start();
+	ReceiveHandler::setMqttCallback(theApplication->getInternalNetworkCallback());
+	theApplication->setExternalNetworkCallback(ReceiveHandler::getReceiveHandler());
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);
 	theApplication->setClean(theAppConfig.mqttsnCfg.cleanSession);
@@ -121,6 +127,15 @@ Network* MqttsnClientApplication::getNetwork()
 	 return _mqttsn.getNetwork();
 }
 
+NetworkCallback MqttsnClientApplication::getInternalNetworkCallback()
+{
+	return _mqttsn.getInternalNetworkCallback();
+}
+
+void MqttsnClientApplication::setExternalNetworkCallback(NetworkCallback cb)
+{
+	_mqttsn.setExternalNetworkCallback(cb);
+}
 
 void MqttsnClientApplication::initialize(APP_CONFIG config){
 	_mqttsn.initialize(config);

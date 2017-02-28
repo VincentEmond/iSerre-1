@@ -95,6 +95,7 @@ class IsnClient
 public:
 	IsnClient();
 	~IsnClient();
+	void executeProtocol();
 };
 
 

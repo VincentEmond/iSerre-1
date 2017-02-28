@@ -104,7 +104,7 @@ void ResponseHandler(NWResponse* resp, int* returnCode){
 MqttsnClient::MqttsnClient(){
     _network = new Network(UART2_IDX, &UART_Com2_initConfig, &UART_Com2_state);
     //_network = new Network(UART1_IDX, &UART_Com1_initConfig, &UART_Com1_state);
-    _network->setRxHandler(ResponseHandler);
+
     _sendQ = new SendQue();
     _duration = 0;
     _clientId = new MQString();
@@ -120,6 +120,15 @@ MqttsnClient::MqttsnClient(){
     _subscribingFlg = false;
     theMqttsn = this;
 }
+
+NetworkCallback MqttsnClient::getInternalNetworkCallback() {
+	return ResponseHandler;
+}
+
+void MqttsnClient::setExternalNetworkCallback(NetworkCallback cb) {
+	_network->setRxHandler(cb);
+}
+
 
 MqttsnClient::~MqttsnClient(){
   _sendQ->deleteAllRequest();

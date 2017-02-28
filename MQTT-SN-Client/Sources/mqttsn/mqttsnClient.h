@@ -81,6 +81,8 @@
 
 using namespace tomyClient;
 
+typedef void(*NetworkCallback)(NWResponse*, int*);
+
 typedef struct {
 	int (*callback)(void);
 	uint32_t sec;
@@ -189,6 +191,8 @@ public:
     void setClean(bool clean);
     void setRetryMax(uint8_t cnt);
     void setGwAddress();
+    NetworkCallback getInternalNetworkCallback();
+    void setExternalNetworkCallback(NetworkCallback);
     MQString* getClientId();
     ClientStatus* getClientStatus();
     bool isCleanSession();

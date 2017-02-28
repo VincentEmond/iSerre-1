@@ -99,6 +99,9 @@ public:
 	int unsubscribe(MQString* topic);
 	int disconnect(uint16_t duration);
 
+	NetworkCallback getInternalNetworkCallback();		//Retourne le callback que mqtt utilise a l'interne pour gere ses trames
+	void setExternalNetworkCallback(NetworkCallback);	//Sert a externaliser le controle du reseau sans pour autant le sortir de mqtt
+
 	void addTask();
 	void startWdt();
 	void stopWdt();
