@@ -16,9 +16,9 @@
 #include "utility/StringUtility.h"
 #include <string.h>
 
-//#define SINK_TEMP
+#define SINK_TEMP
 //#define SINK_HUMI
-#define SINK_ACTI
+//#define SINK_ACTI
 
 #define DEFAULT_MEASURE_NUMBER (4u)
 #define DEFAULT_READ_FRAME_PERIOD (10u)

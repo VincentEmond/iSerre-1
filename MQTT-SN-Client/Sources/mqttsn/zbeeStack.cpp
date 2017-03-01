@@ -564,6 +564,11 @@ uint8_t NWResponse::getType(){
 	return _frameDataPtr[ZB_RSP_DATA_OFFSET + 1];
 }
 
+uint8_t NWResponse::getIsnType(){
+	//Le type de message vien apres les 2 bytes du magic number.
+	return _frameDataPtr[ZB_RSP_DATA_OFFSET + 2];
+}
+
 uint8_t NWResponse::getPayload(uint8_t index){
     return _frameDataPtr[index + ZB_RSP_DATA_OFFSET];
 }

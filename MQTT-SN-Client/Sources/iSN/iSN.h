@@ -11,6 +11,7 @@
 #include "mqttsn/zbeeStack.h"
 #include <stdint.h>
 #include "stdio.h"
+#include "string.h"
 
 //Les messages ISN
 #define ISN_MSG_SEARCH_SINK 		0x01
@@ -25,6 +26,9 @@
 #define ISN_ACTI_TEMP				0x81
 #define ISN_ACTI_HUMI				0x82
 
+#define ISN_ERR_MAX_CLIENT			0x0A
+
+
 /*Pour différentier le protocole iSN du protocole MQTT-SN
   Une trame qui commence par 0x02 en MQTT veux dire 2 octets de longueur.
   L'octet qui suit est le type de message et 0x03 est reservé dans MQTT donc on
@@ -34,21 +38,24 @@
 //Le nombre maximal de clients pouvant se connecter au sink.
 #define ISN_SINK_MAX_CLIENT				10
 
+typedef void(*NetworkCallback)(tomyClient::NWResponse*, int*);
 
 uint8_t MSB16(uint16_t x);
 uint8_t LSB16(uint16_t x);
+
+void isnRxCallback(tomyClient::NWResponse* resp, int* respCode);
 
 class IsnMessage
 {
 public:
 	IsnMessage();
 	~IsnMessage();
-	uint8_t*& getPayload();
-	uint16_t getLength();
+	uint8_t* getPayload();
+	uint8_t getLength();
 	void printPayload();
 protected:
 	uint8_t* _buffer;
-	uint16_t _length;
+	uint8_t _length;
 };
 
 class IsnMsgSearchSink : public IsnMessage
@@ -87,6 +94,12 @@ class IsnServer
 public:
 	IsnServer();
 	~IsnServer();
+	void exec();
+	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
+	NetworkCallback getInternalNetworkCallback();
+	int addToClientList(tomyClient::NWAddress64& addr);
+private:
+	tomyClient::NWAddress64* _lstClients;
 
 };
 
@@ -95,12 +108,15 @@ class IsnClient
 public:
 	IsnClient();
 	~IsnClient();
-	void executeProtocol();
+	void exec();
+private:
+	int _clientStatus;
 };
 
-
-
 void iSN_Start();
+
+static IsnServer* theIsnServer;
+
 template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startIndex);
 
 

@@ -204,6 +204,7 @@ public:
 	uint8_t  getPayload(uint8_t index);
 	uint8_t  getPayloadLength();
 	uint8_t  getType();
+	uint8_t  getIsnType();
 	uint8_t  getOption();
 	uint8_t* getPayload();
 	uint8_t* getBody();

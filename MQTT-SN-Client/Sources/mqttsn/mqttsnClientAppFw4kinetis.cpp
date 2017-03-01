@@ -51,6 +51,7 @@ using namespace std;
 using namespace tomyClient;
 
 MqttsnClientApplication* theApplication = new MqttsnClientApplication();
+IsnServer* isnSrv = new IsnServer();
 
 
 
@@ -66,8 +67,10 @@ int mqttsnClientAppMain()
 {
 
 
-	//iSN_Start();
+
 	ReceiveHandler::setMqttCallback(theApplication->getInternalNetworkCallback());
+	ReceiveHandler::setIsnCallback(isnSrv->getInternalNetworkCallback());
+
 	theApplication->setExternalNetworkCallback(ReceiveHandler::getReceiveHandler());
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);
@@ -81,9 +84,13 @@ int mqttsnClientAppMain()
 		theApplication->setWillMessage(willMsg);
 	}
 
+	iSN_Start();
+
 	theApplication->addTask();
 	setup();
+
 	theApplication->initialize(theAppConfig);
+
 	theApplication->run();
 	return 0;
 }
@@ -114,6 +121,7 @@ int MqttsnClientApplication::run(){
 	while(true){
 		_wdTimer.wakeUp();
 		_mqttsn.readPacket();
+		isnSrv->exec();
 		int rc = _mqttsn.exec();
 		if(rc == MQTTSN_ERR_REBOOT_REQUIRED){
 			_mqttsn.subscribe();

@@ -52,12 +52,12 @@ template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startI
 }
 
 
-uint8_t*& IsnMessage::getPayload()
+uint8_t* IsnMessage::getPayload()
 {
 	return _buffer;
 }
 
-uint16_t IsnMessage::getLength()
+uint8_t IsnMessage::getLength()
 {
 	return _length;
 }
@@ -90,4 +90,61 @@ void iSN_Start()
 	sink.printPayload();
 }
 
+IsnServer::IsnServer()
+{
+	_lstClients = new tomyClient::NWAddress64[ISN_SINK_MAX_CLIENT](); //Les () initialise a 0
+	theIsnServer = this;
+}
+
+void isnRxCallback(tomyClient::NWResponse* resp, int* respCode)
+{
+	theIsnServer->receiveMessageHandler(resp, respCode);
+}
+
+
+void IsnServer::exec()
+{
+	printf("iSN server doing work\n");
+}
+
+void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode)
+{
+	uint8_t isnMsgType = resp->getIsnType();
+
+		switch(isnMsgType)
+		{
+			case ISN_MSG_SEARCH_SINK:
+				printf("Recu search sink");
+				addToClientList(resp->getRemoteAddress64());
+				break;
+			default:
+				printf("Erreur. Pas une trame iSN");
+		}
+}
+
+NetworkCallback IsnServer::getInternalNetworkCallback()
+{
+	return isnRxCallback;
+}
+
+int IsnServer::addToClientList(tomyClient::NWAddress64& addr)
+{
+	for (int i=0; i<ISN_SINK_MAX_CLIENT; i++)
+	{
+		if (&(_lstClients[i]) == NULL) {
+
+			tomyClient::NWAddress64* theClient = new tomyClient::NWAddress64();
+			memcpy(theClient, &addr, sizeof(tomyClient::NWAddress64));
+			_lstClients[i] = *theClient;
+			return 0;
+		}
+	}
+
+	return ISN_ERR_MAX_CLIENT;
+}
+
+IsnServer::~IsnServer()
+{
+	delete[] _lstClients;
+}
 
