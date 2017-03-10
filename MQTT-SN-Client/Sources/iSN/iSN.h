@@ -12,6 +12,10 @@
 #include <stdint.h>
 #include "stdio.h"
 #include "string.h"
+#include <vector>
+
+using namespace std;
+using namespace tomyClient;
 
 //Les messages ISN
 #define ISN_MSG_SEARCH_SINK 		0x01
@@ -26,17 +30,21 @@
 #define ISN_ACTI_TEMP				0x81
 #define ISN_ACTI_HUMI				0x82
 
-#define ISN_ERR_MAX_CLIENT			0x0A
+//Les etats du client
+#define ISN_CLIENTSTATE_NOT_CONNECTED 	0x00
+#define ISN_CLIENSTATE_CONNECT_SENT		0x01
+#define ISN_CLIENTSTATE_CONNECTED		0x02
 
+//Les etats du serveur
+#define ISN_SERVERSTATE_IDLE			0x01
+#define ISN_SERVERSTATE_HANDLE_CONNECT	0x02
 
-/*Pour différentier le protocole iSN du protocole MQTT-SN
-  Une trame qui commence par 0x02 en MQTT veux dire 2 octets de longueur.
-  L'octet qui suit est le type de message et 0x03 est reservé dans MQTT donc on
-  peut reconnaitre que c'est un message iSN et non pas un message MQTT-SN */
-#define ISN_MAGIC_NUMBER			0x0203
+//Timeout du client en ms
+#define ISN_CLIENT_SEARCH_TIMEOUT		10000
+#define ISN_CLIENT_CONNECT_TIMEOUT		30000
 
-//Le nombre maximal de clients pouvant se connecter au sink.
-#define ISN_SINK_MAX_CLIENT				10
+//Retry du client
+#define ISN_CLIENT_CONNECT_RETRY 5
 
 typedef void(*NetworkCallback)(tomyClient::NWResponse*, int*);
 
@@ -44,6 +52,8 @@ uint8_t MSB16(uint16_t x);
 uint8_t LSB16(uint16_t x);
 
 void isnRxCallback(tomyClient::NWResponse* resp, int* respCode);
+
+
 
 class IsnMessage
 {
@@ -68,10 +78,7 @@ private:
 
 class IsnMsgSearchSinkAck : public IsnMessage
 {
-public:
-	IsnMsgSearchSinkAck(tomyClient::NWAddress64& sink_address);
-private:
-	tomyClient::NWAddress64& _sinkAddress;
+
 };
 
 class IsnMsgConfig : public IsnMessage
@@ -92,28 +99,26 @@ class IsnMsgMeasure : public IsnMessage
 class IsnServer
 {
 public:
-	IsnServer();
+	IsnServer(Network net);
 	~IsnServer();
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 	NetworkCallback getInternalNetworkCallback();
 	int addToClientList(tomyClient::NWAddress64& addr);
 private:
-	tomyClient::NWAddress64* _lstClients;
-
+	vector<tomyClient::NWAddress64> _lstClients;
+	Network _net;
 };
 
 class IsnClient
 {
 public:
-	IsnClient();
-	~IsnClient();
+	IsnClient(Network n);
 	void exec();
 private:
 	int _clientStatus;
+	Network _net;
 };
-
-void iSN_Start();
 
 static IsnServer* theIsnServer;
 

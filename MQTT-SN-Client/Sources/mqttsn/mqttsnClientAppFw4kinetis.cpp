@@ -84,8 +84,6 @@ int mqttsnClientAppMain()
 		theApplication->setWillMessage(willMsg);
 	}
 
-	iSN_Start();
-
 	theApplication->addTask();
 	setup();
 
@@ -118,7 +116,7 @@ void MqttsnClientApplication::stopWdt(){
 
 /*------------ Client execution  forever --------------*/
 int MqttsnClientApplication::run(){
-	while(true){
+	while(true){	//TODO: Faudrait pas que ca roule a l'infini alterner entre mqtt et isn
 		_wdTimer.wakeUp();
 		_mqttsn.readPacket();
 		isnSrv->exec();
