@@ -16,28 +16,46 @@ inline uint8_t LSB16(int x)
 	return (x & 0xFF);
 }
 
-IsnMsgSearchSink::IsnMsgSearchSink(uint8_t device_type)
+IsnMsgConnectAck::IsnMsgConnectAck()
 {
-	_length = 4; //Magic number 2 byte + Msg type 1 byte + Device Type 1 byte
+	_length = 1; //Frame_Type
 	_buffer = new uint8_t[_length];
-	_deviceType = device_type;
-	_buffer[0] = MSB16(ISN_MAGIC_NUMBER);
-	_buffer[1] = LSB16(ISN_MAGIC_NUMBER);
-	_buffer[2] = ISN_MSG_SEARCH_SINK;
-	_buffer[3] = device_type;
+	_buffer[0] = ISN_MSG_CONNECT_ACK;
+	_type = ISN_MSG_CONNECT_ACK;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
-IsnMsgSearchSinkAck::IsnMsgSearchSinkAck(tomyClient::NWAddress64& sink_address) : _sinkAddress(sink_address)
+IsnMsgSearchSink::IsnMsgSearchSink(uint8_t device_type)
 {
-	_length = 2 + 1 + (64/8); //Magic number + msg type + 64 bits address
+	_length = 2; //Frame_type + Device_type
 	_buffer = new uint8_t[_length];
-	_buffer[0] = MSB16(ISN_MAGIC_NUMBER);
-	_buffer[1] = LSB16(ISN_MAGIC_NUMBER);
-	_buffer[2] = ISN_MSG_SEARCH_SINK_ACK;
-	uint32_t upper = sink_address.getMsb();
-	uint32_t lower = sink_address.getLsb();
-	writeDataToBuffer<uint32_t>(&upper, _buffer, 3);
-	writeDataToBuffer<uint32_t>(&lower, _buffer, 7);
+	_deviceType = device_type;
+	_buffer[0] = ISN_MSG_SEARCH_SINK;
+	_buffer[1] = device_type;
+	_timeout = ISN_CLIENT_SEARCH_TIMEOUT;
+	_nbRetry = ISN_CLIENT_SEARCH_RETRY;
+	_type = ISN_MSG_SEARCH_SINK;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgSearchSinkAck::IsnMsgSearchSinkAck()
+{
+	_length = 1; //Frame_Type
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_SEARCH_SINK_ACK;
+	_type = ISN_MSG_SEARCH_SINK_ACK;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgConnect::IsnMsgConnect() : IsnMessage()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_CONNECT;
+	_type = ISN_MSG_CONNECT;
+	_timeout = ISN_CLIENT_CONNECT_TIMEOUT;
+	_nbRetry = ISN_CLIENT_CONNECT_RETRY;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
 template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startIndex)
@@ -51,6 +69,9 @@ template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startI
 	}
 }
 
+/*
+ * IsnMessage
+ */
 
 uint8_t* IsnMessage::getPayload()
 {
@@ -62,11 +83,44 @@ uint8_t IsnMessage::getLength()
 	return _length;
 }
 
-IsnMessage::IsnMessage() {}
+uint16_t IsnMessage::getTimeout()
+{
+	return _timeout;
+}
+
+void IsnMessage::setTimeout(uint16_t t)
+{
+	_timeout = t;
+}
+
+void IsnMessage::setMessageStatus(uint8_t status)
+{
+	_msgStatus = status;
+}
+
+uint8_t IsnMessage::getMessageStatus()
+{
+	return _msgStatus;
+}
+
+uint8_t IsnMessage::getRetry()
+{
+	return _nbRetry;
+}
+
+IsnMessage::IsnMessage()
+{
+	_nbRetry = 0;
+	_timeout = 0;
+	_buffer = NULL;
+	_length = 0;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+	_type = 0;
+}
 
 IsnMessage::~IsnMessage()
 {
-	free(_buffer);
+	delete[] _buffer;
 }
 
 void IsnMessage::printPayload()
@@ -83,68 +137,43 @@ void IsnMessage::printPayload()
 	printf("==================================\n");
 }
 
-void iSN_Start()
+uint8_t IsnMessage::getType()
 {
-	tomyClient::NWAddress64 addrSink(0x0013A200, 0x4103DD61);
-	IsnMsgSearchSinkAck sink(addrSink);
-	sink.printPayload();
+	return _type;
 }
 
-IsnServer::IsnServer()
+/*
+ * IsnMessage end
+ */
+
+/*
+ * ClientInfo
+ */
+
+IsnClientInfo::IsnClientInfo(NWAddress64 addr)
 {
-	_lstClients = new tomyClient::NWAddress64[ISN_SINK_MAX_CLIENT](); //Les () initialise a 0
-	theIsnServer = this;
+	_addr = addr;
 }
 
-void isnRxCallback(tomyClient::NWResponse* resp, int* respCode)
+void IsnClientInfo::setClientAddress(NWAddress64 addr)
 {
-	theIsnServer->receiveMessageHandler(resp, respCode);
+	_addr = addr;
+}
+
+NWAddress64 IsnClientInfo::getClientAddress()
+{
+	return _addr;
 }
 
 
-void IsnServer::exec()
+bool IsnClientInfo::operator==(IsnClientInfo& other)
 {
-	printf("iSN server doing work\n");
+	return (_addr.getLsb() == other.getClientAddress().getLsb()
+			&& _addr.getMsb() == other.getClientAddress().getMsb());
 }
 
-void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode)
-{
-	uint8_t isnMsgType = resp->getIsnType();
+/*
+ * Fin ClientInfo
+ */
 
-		switch(isnMsgType)
-		{
-			case ISN_MSG_SEARCH_SINK:
-				printf("Recu search sink");
-				addToClientList(resp->getRemoteAddress64());
-				break;
-			default:
-				printf("Erreur. Pas une trame iSN");
-		}
-}
-
-NetworkCallback IsnServer::getInternalNetworkCallback()
-{
-	return isnRxCallback;
-}
-
-int IsnServer::addToClientList(tomyClient::NWAddress64& addr)
-{
-	for (int i=0; i<ISN_SINK_MAX_CLIENT; i++)
-	{
-		if (&(_lstClients[i]) == NULL) {
-
-			tomyClient::NWAddress64* theClient = new tomyClient::NWAddress64();
-			memcpy(theClient, &addr, sizeof(tomyClient::NWAddress64));
-			_lstClients[i] = *theClient;
-			return 0;
-		}
-	}
-
-	return ISN_ERR_MAX_CLIENT;
-}
-
-IsnServer::~IsnServer()
-{
-	delete[] _lstClients;
-}
 

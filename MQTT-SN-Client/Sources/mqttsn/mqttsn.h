@@ -72,10 +72,16 @@
 
                               /* [sec] */
 #define MQTTSN_DEFAULT_KEEPALIVE 3600     // 1H
+//Le temps après lequel le client doit envoyer un PINGREQ à la passerelle
+//pour s'assurer qu'elle soit en vie.
 #define MQTTSN_DEFAULT_DURATION   900     // 15min
 #define MQTTSN_TIME_SEARCHGW        3
+
+//Le temps d'attente entre les tentatives de renvoie de message
 #define MQTTSN_TIME_RETRY          10
+//Le temps d'attente avant de renvoyer un message lorsque la passerelle est surchargée.
 #define MQTTSN_TIME_WAIT          300     //  5min
+//Le nombre de fois qu'on essaye de renvoyer le message avant d'abandonner.
 #define MQTTSN_RETRY_COUNT          5
 
 #define MQTTSN_MAX_TOPICS         15
@@ -132,9 +138,28 @@
 #define MQTTSN_RC_REJECTED_NOT_SUPPORTED    0x03
 
 #define MQTTSN_MSG_REQUEST     1
+
+/*
+ * MQTTSN_MSG_RESEND_REQ est un état qui indique qu'on essaye de renvoyé un message suite à la
+ * demande demande de la passerelle qui indique qu'elle était surchargée.
+ *
+ * If the return code was “rejected: congestion”, the client should wait for a
+ * time TWAIT before restarting the registration procedure.
+ */
 #define MQTTSN_MSG_RESEND_REQ  2
+/*
+ * WAIT_ACK indique que le message est envoyé et qu'on attend maintenant une réponse.
+ */
 #define MQTTSN_MSG_WAIT_ACK    3
+
+/*
+ * COMPLETE indique que le message a été accepté par la passerelle
+ */
 #define MQTTSN_MSG_COMPLETE    4
+
+/*
+ * REJECTED indique que le message a été refusé par la passerelle
+ */
 #define MQTTSN_MSG_REJECTED    5
 
 

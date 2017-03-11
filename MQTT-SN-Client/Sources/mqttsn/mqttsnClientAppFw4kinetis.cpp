@@ -45,13 +45,12 @@
 #include <stdio.h>
 #include <string.h>
 #include "iSN/iSN.h"
-#include "receiveHandler.cpp"
 
 using namespace std;
 using namespace tomyClient;
 
 MqttsnClientApplication* theApplication = new MqttsnClientApplication();
-IsnServer* isnSrv = new IsnServer();
+IsnServer* isnSrv = new IsnServer(network);
 
 
 
@@ -65,13 +64,6 @@ extern void  setup();
 =========================================*/
 int mqttsnClientAppMain()
 {
-
-
-
-	ReceiveHandler::setMqttCallback(theApplication->getInternalNetworkCallback());
-	ReceiveHandler::setIsnCallback(isnSrv->getInternalNetworkCallback());
-
-	theApplication->setExternalNetworkCallback(ReceiveHandler::getReceiveHandler());
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);
 	theApplication->setClean(theAppConfig.mqttsnCfg.cleanSession);
@@ -89,7 +81,15 @@ int mqttsnClientAppMain()
 
 	theApplication->initialize(theAppConfig);
 
-	theApplication->run();
+	while (true)
+	{
+		//Run iSN
+		isnSrv->exec();
+		//Run MQTT-SN
+		theApplication->run();
+	}
+
+
 	return 0;
 }
 
@@ -116,15 +116,15 @@ void MqttsnClientApplication::stopWdt(){
 
 /*------------ Client execution  forever --------------*/
 int MqttsnClientApplication::run(){
-	while(true){	//TODO: Faudrait pas que ca roule a l'infini alterner entre mqtt et isn
-		_wdTimer.wakeUp();
-		_mqttsn.readPacket();
-		isnSrv->exec();
-		int rc = _mqttsn.exec();
-		if(rc == MQTTSN_ERR_REBOOT_REQUIRED){
-			_mqttsn.subscribe();
-		}
+
+	printf("MQTT-SN doing work\n");
+	_wdTimer.wakeUp();
+	_mqttsn.readPacket();
+	int rc = _mqttsn.exec();
+	if(rc == MQTTSN_ERR_REBOOT_REQUIRED){
+		_mqttsn.subscribe();
 	}
+
 	return 0;
 }
 

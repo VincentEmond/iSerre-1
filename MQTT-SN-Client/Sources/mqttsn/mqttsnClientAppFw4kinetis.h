@@ -39,6 +39,7 @@
 #define MQTTSNCLIENTAPPLICATION_H_
 
 #include "mqttsnClient.h"
+#include "..\iSN\iSN.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,6 +119,9 @@ private:
 };
 
 extern MqttsnClientApplication* theApplication;
+extern IsnServer* isnSrv;
+extern tomyClient::Network* pNetwork;
+extern tomyClient::Network& network;
 
 #endif /* MQTTSCLIENTAPPLICATION_H_ */
 

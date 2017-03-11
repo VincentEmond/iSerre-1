@@ -53,7 +53,9 @@ XBeeAppConfig theAppConfig = {
 	}
  };
 
-Network network(UART1_IDX, &UART_Com1_initConfig, &UART_Com1_state);
+Network* pNetwork = new Network(UART1_IDX, &UART_Com1_initConfig, &UART_Com1_state);
+
+Network& network = *pNetwork;
 
 /*------------------------------------------------------
  *             Xbee module address

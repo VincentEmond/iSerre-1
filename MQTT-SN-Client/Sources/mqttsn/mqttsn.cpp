@@ -372,7 +372,19 @@ bool MqttsnMessage::allocateBody(){
 }
 
 void MqttsnMessage::setDup(){
+
+	//S'il y a des octets dans le message et que le message est un publish ou un subscribe
 	if(_msgBuff && (_type == MQTTSN_TYPE_PUBLISH || _type == MQTTSN_TYPE_SUBSCRIBE)){
+
+		/*
+		 * Active le bit 7 dans les flags du message
+		 * C'est le dup (duplicate) flag
+		 *
+		 * set to Åg0Åh if message is sent for the first time; set to Åg1Åh if
+		 * retransmitted (only relevant within PUBLISH messages)
+		 *
+		 */
+
 		_flags |= 0x80;
 		getBody()[0] = _flags ;
 	}

@@ -118,15 +118,8 @@ MqttsnClient::MqttsnClient(){
     _topics.allocate(MQTTSN_MAX_TOPICS + 1);
     _sendFlg = false;
     _subscribingFlg = false;
+    _network->setRxHandler(ResponseHandler);
     theMqttsn = this;
-}
-
-NetworkCallback MqttsnClient::getInternalNetworkCallback() {
-	return ResponseHandler;
-}
-
-void MqttsnClient::setExternalNetworkCallback(NetworkCallback cb) {
-	_network->setRxHandler(cb);
 }
 
 
@@ -291,7 +284,10 @@ void MqttsnClient::copyMsg(MqttsnMessage* msg, NWResponse* recvMsg){
     Send a MQTT-S Message (add the send request)
 ==========================================================*/
 int MqttsnClient::requestSendMsg(MqttsnMessage* mqttsMsgPtr){
+
+	//Rajoute une trame dans la file d'envoie
     int index = _sendQ->addRequest((MqttsnMessage*)mqttsMsgPtr);
+    //On demande l'envoi de ce message
 	_sendQ->setStatus(index, MQTTSN_MSG_REQUEST);
     return MQTTSN_ERR_NO_ERROR;
 }
@@ -412,6 +408,8 @@ int MqttsnClient::sendRecvMsg(){
 	/*======= Receive Message ===========*/
 	_network->readPacket();  //  Receive MQTT-S Message
 
+	//Si le temps MQTTSN_DEFAULT_DURATION est écoulé alors on doit envoyer un PINGREQ
+	//a la passerelle pour s'assurer qu'elle est encore en vie.
 	if (_clientStatus.isPINGREQRequired()){
 		/*-------- Send PINGREQ -----------*/
 		if(getMsgRequestType() != MQTTSN_TYPE_PINGREQ){
@@ -465,7 +463,10 @@ int MqttsnClient::broadcast(uint16_t packetReadTimeout){
 int MqttsnClient::unicast(uint16_t packetReadTimeout){
     int retry = 0;
 
+    //Essaye de réenvoyer MQTTSN_RETRY_COUNT fois
     while(retry < _nRetry){
+
+    	//La passerelle a demandé de renvoyer le message plus tard.
     	if (getMsgRequestStatus() == MQTTSN_MSG_RESEND_REQ){
 			/* ------  Re send Time delay -------*/
 			#ifdef ARDUINO
@@ -475,14 +476,19 @@ int MqttsnClient::unicast(uint16_t packetReadTimeout){
 			#elif defined(LINUX)
 			  usleep(MQTTSN_TIME_WAIT * 1000000);
 			#elif defined(KINETIS)
+			  //Si la passerelle a refusé la réception parce qu'elle était surchargée
+			  //alors on doit attendre MQTTSN_TIME_WAIT secondes avant de renvoyer.
 			  OSA_TimeDelay(MQTTSN_TIME_WAIT * 1000);
 			#else
               #error Unsupported platform
 			#endif
-			setMsgRequestStatus(MQTTSN_MSG_REQUEST);
+			//On demande au client d'envoyé le message.
+			  setMsgRequestStatus(MQTTSN_MSG_REQUEST);
 		}
 
     	/*------ Send Top message in SendQue -----*/
+
+    	//Si le message n'est pas en état "demande d'envoi" alors déjà envoyé on sort d'ici
     	if (getMsgRequestStatus() != MQTTSN_MSG_REQUEST){
     		return MQTTSN_ERR_NO_ERROR;
     	}
@@ -495,14 +501,35 @@ int MqttsnClient::unicast(uint16_t packetReadTimeout){
 		debug.println(_sendQ->getMessage(0)->getMsgTypeName());
 #endif
 
+		//Envoie le message à l'avant de la file en unicast sur le réseau
+		//Payload: Les octets de la trame
+		//PayloadLength: La longueur de la trame en octet
+		//Type: Unicast/Broadcast/Multicast
         _network->send(_sendQ->getMessage(0)->getMsgBuff(), _sendQ->getMessage(0)->getLength(), UcastReq);
+
+        //On reset le timer pour l'envoie d'un PINGREQ à la passerelle.
         _clientStatus.setLastSendTime();
 
+        //Indique que le message est retransmit essentiellement le prochain message qu'on envoie *SI* on
+        //dois retransmettre aura son flag Duplicate à 1
         _sendQ->getMessage(0)->setDup();
+
+        //Active un timer si après MQTTSN_TIME_RETRY secondes on a pas de réponse  on réessaye.
         _respTimer.start(packetReadTimeout * 1000UL);
+
+        //Chaque message à un état qui indique ou on en est avec son traitement.
+        //Dans ce cas-ci on dit qu'on a envoyé ce message et qu'on attend une réponse.
         setMsgRequestStatus(MQTTSN_MSG_WAIT_ACK);
 
+        //Tant qu'on attend pour la réponse
         while(!_respTimer.isTimeUp()){
+
+        	//Pour ces type de message c'est "Fire and forget"
+        	//on n'attend pas de confirmation de la passerelle on
+        	//ne tente pas de réenvoyer.
+
+        	//Si on envoie/recoit une forme de ACK alors on retourne sans erreur
+        	//Si le message a été géré alors il est dans l'état MQTTSN_MSG_COMPLETE
             if ((getMsgRequestType() == MQTTSN_TYPE_PUBLISH &&
             		  _sendQ->getMessage(0)->getQos() == 0 )  ||
             	getMsgRequestType() == MQTTSN_TYPE_PUBACK     ||
@@ -511,16 +538,24 @@ int MqttsnClient::unicast(uint16_t packetReadTimeout){
 				getMsgRequestStatus() == MQTTSN_MSG_COMPLETE ){
             	//clearMsgRequest();
                 return MQTTSN_ERR_NO_ERROR;
+
+            //Si on envoie un DISCONNECT alors on déconnecte
             }else if(getMsgRequestType() == MQTTSN_TYPE_DISCONNECT ){
             	_clientStatus.recvDISCONNECT();
             	//clearMsgRequest();
 				return MQTTSN_ERR_NO_ERROR;
+
+			//Si on la passerelle rejette notre trame alors on retourne un code d'erreur REJECTED
         	}else if (getMsgRequestStatus() == MQTTSN_MSG_REJECTED){
         		//clearMsgRequest();
 				return MQTTSN_ERR_REJECTED;
             }
             /*----- Read response  ----*/
+
+            //Lit une trame. S'il y a une trame le callback MQTT-SN est appelé
+            // (recieveMessageHandler) le callback peut joué sur le return code rc.
 			int rc = _network->readPacket();
+
 			if(rc == MQTTSN_READ_RESP_ONCE_MORE){
 				rc = _network->readPacket();
 			}
@@ -541,9 +576,14 @@ int MqttsnClient::unicast(uint16_t packetReadTimeout){
             }
 
         }
+
+        //Si on a rien reçu après le timeout on change l'état du message
+        //de "En attente de réponse" à "Requête d'envoi"
 		setMsgRequestStatus(MQTTSN_MSG_REQUEST);
         retry++;
     }
+
+    //Si on a essayer d'envoyé MQTTSN_RETRY_COUNT fois et on a toujours pas de réponse
     return MQTTSN_ERR_RETRY_OVER;
 }
 
@@ -802,7 +842,7 @@ int  MqttsnClient::pingReq(MQString* clientId){
 }
 
 /* ===================================================
-          Procedures for  Received Messages
+          Procedures for  Received Messages (Le callback RX)
  =====================================================*/
 void MqttsnClient::recieveMessageHandler(NWResponse* recvMsg, int* returnCode){
 	uint8_t msgType = recvMsg->getType();

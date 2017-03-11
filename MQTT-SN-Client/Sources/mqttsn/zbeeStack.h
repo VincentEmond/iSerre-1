@@ -86,22 +86,41 @@
 
 namespace tomyClient {
 
+//Le start delimiter de la trame api.
 #define START_BYTE 0x7e
+//L'indicateur d'échappement dans la trame api mode 2
 #define ESCAPE     0x7d
 #define XON        0x11
 #define XOFF       0x13
 
-
+//0x10 est le frame type pour un Transmit request dans la trame API
 #define ZB_API_REQUEST               0x10
+//0x90 est le frame type pour un Receive Packet dans la trame API
 #define ZB_API_RESPONSE              0x90
+//0x8A est le frame type Modem Status est est une trame envoyé au Xbee
+//automatiquement quand certains évènements surviennent par exemple: un client
+//qui rejoint le réseau xbee.
 #define ZB_API_MODEMSTATUS           0x8A
 
 #define ZB_PACKET_ACKNOWLEGED        0x01
 #define ZB_BROADCAST_PACKET          0x02
 #define ZB_BROADCAST_RADIUS_MAX_HOPS 0
+/*
+ * Skip 64 bit source address (8)
+ * 16 bit source address (2)
+ * Receive options (1) = offset de 11
+ */
 #define ZB_RSP_DATA_OFFSET           11
+/*
+ * Skip Frame ID (1)
+ * 64 bit dest address (8)
+ * 16 dest address (2)
+ * Broadcast radius (1)
+ * Options (1) = offset de 13
+ */
 #define ZB_REQ_DATA_OFFSET           13
 
+//API_ID_POS est l'offset du champ Frame Type dans la trame api.
 #define API_ID_POS                    3
 #define PACKET_OVERHEAD_LENGTH        6
 
@@ -355,6 +374,8 @@ public:
     int  readPacket(uint8_t type = 0);
     void setGwAddress();
     void setGwAddress(NWAddress64& addr);
+    NWAddress64 getGwAddress();
+
     void resetGwAddress(void);
     void setRxHandler(void (*callbackPtr)(NWResponse* data, int* returnCode));
     int  initialize(XBeeConfig  config);

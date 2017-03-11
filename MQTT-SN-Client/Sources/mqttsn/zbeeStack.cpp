@@ -561,12 +561,19 @@ void  NWResponse::setRemoteAddress16(){
 }
 
 uint8_t NWResponse::getType(){
+	/*
+	 * Selon MQTT-SN: if the first octet of the Length field is coded “0x01”
+	 * then the Length field is 3-octet long; in this case, the two
+	 * following octets specify the total number of octets of the message (most-significant octet first)
+	 */
+	if (_frameDataPtr[ZB_RSP_DATA_OFFSET] == 0x01)
+		return _frameDataPtr[ZB_RSP_DATA_OFFSET + 3];
 	return _frameDataPtr[ZB_RSP_DATA_OFFSET + 1];
 }
 
 uint8_t NWResponse::getIsnType(){
-	//Le type de message vien apres les 2 bytes du magic number.
-	return _frameDataPtr[ZB_RSP_DATA_OFFSET + 2];
+	//Dans iSN le type apparait au début de la trame.
+	return _frameDataPtr[ZB_RSP_DATA_OFFSET];
 }
 
 uint8_t NWResponse::getPayload(uint8_t index){
@@ -723,6 +730,11 @@ void Network::setGwAddress(){
     _gwAddress16 = getRxRemoteAddress16();
 }
 
+NWAddress64 Network::getGwAddress()
+{
+	return _gwAddress64;
+}
+
 void Network::setGwAddress(NWAddress64& addr){
 	_gwAddress64.setMsb(addr.getMsb());
 	_gwAddress64.setLsb(addr.getLsb());
@@ -750,9 +762,12 @@ void Network::send(uint8_t* payload, uint8_t payloadLen, SendReqType type){
 int Network::readPacket(uint8_t type){
     _returnCode = 0;
 
+    //S'il y a quelque chose dans le tampon de réception
     if(_serialPort->checkRecvBuf()){
 		if(readApiFrame(PACKET_TIMEOUT_CHECK)){
 			if(_response.getApiId() == ZB_API_RESPONSE){
+				//Si on a reçu une trame réponse ZigBee et qu'on a
+				//setté un callback alors on appel ce callback
 				if (_rxCallbackPtr != 0){
 					_rxCallbackPtr(&_rxResp, &_returnCode);
 				}
@@ -809,15 +824,25 @@ void Network::readApiFrame(){
 
     while(read(&_byteData )){
 
+    	//Si on lit 0x7E c'est qu'on est sur le start delimiter de la trame api.
         if( _byteData == START_BYTE){
             _pos = 1;
             continue;
         }
         // Check ESC
+
+        /*
+         * Si on est en API mode = 2. Certains caractères peuvent être échappé.
+         * Pour ce faire on met 0x7D devant le caractère à échapper et on le XOR avec 0x20
+         * pour "Togglé" son bit 5
+         */
         if(_pos > 0 && _byteData == ESCAPE){
           if(read(&_byteData )){
               _byteData = 0x20 ^ _byteData;  // decode
           }else{
+        	  //Si on a reçu l'indicateur d'échappement mais que le prochain octet
+        	  //n'est pas disponible dans le tampon alors on met un flag a true pour
+        	  //traiter le prochain octet reçu comme un octet échappé
               _escape = true;
               continue;
           }
@@ -828,43 +853,64 @@ void Network::readApiFrame(){
             _escape = false;
         }
 
+        //On commence à accumuler à partir du champ Frame Type pour le calcul du checksum
+        //Ça veux dire que Start Delimiter et Length sont ignoré dans le calcul.
         if(_pos >= API_ID_POS){
             _checksumTotal+= _byteData;
         }
 
         switch(_pos){
         case 0:
+        	//On est sur le start delimiter
             break;
 
         case 1:
+        	//On est sur l'octet le plus significatif de la longueur de la trame.
             _response.setMsbLength(_byteData);
             break;
 
         case 2:
+        	//On est sur l'octet le moins significatif de la longueur de la trame
             _response.setLsbLength(_byteData);
             break;
         case 3:
+        	//On est sur l'octet Frame Type qui indique le type de Trame Api.
         	D_NWSTACKW("\r\n===> Recv:    ");
             _response.setApiId(_byteData);   // API
             break;
         default:
+        	//Limite la trame à la longueur maximale d'une trame MQTT-SN.
+        	//Ce comportement fais que l'objet réseau n'est plus indépendant de MQTT
             if(_pos > MQTTSN_MAX_FRAME_SIZE){
               _response.setErrorCode(PACKET_EXCEEDS_BYTE_ARRAY_LENGTH);
               _pos = 0;
               return;
+            //Si on est sur le dernier octet de la trame qui est le Checksum.
+            //Note: On ajoute +3 car start delimiter (1 octet) et Lengths (2 octets)
+            //Ne font pas partie du length de la trame.
             }else if(_pos == (_response.getFrameLength() + 3)){
-              if((_checksumTotal & 0xff) == 0xff){
-                  _response.setChecksum(_byteData);
-                  _response.setAvailable(true);
-                  _response.setErrorCode(NO_ERROR);
-              }else{
-                  _response.setErrorCode(CHECKSUM_FAILURE);
-              }
-              _response.setFrameLength(_pos - 4);    // 4 = 2(packet len) + 1(Api) + 1(checksum)
-              _pos = 0;
-              _checksumTotal = 0;
-              return;
+            		//On masque pour limiter le checksum à 1 octet
+				  if((_checksumTotal & 0xff) == 0xff){
+					  /*
+					   * L'émetteur calcul le checksum en accumulant les champs à partir de
+					   * Frame Type jusqu'à checksum exclusivement. Il prends ensuite cette somme
+					   * et la maske à 1 octet (& 0xFF) il va ensuite calculer 0xFF - Somme = Checksum
+					   * et placer cette somme dans le champs checksum de manière à ce que l'accumulation des champs
+					   * de Frame Type à checksum inclusivement donne toujours 0xFF.
+					   */
+					  _response.setChecksum(_byteData);
+					  _response.setAvailable(true);
+					  _response.setErrorCode(NO_ERROR);
+				  }else{
+					  _response.setErrorCode(CHECKSUM_FAILURE);
+				  }
+				  _response.setFrameLength(_pos - 4);    // 4 = 2(packet len) + 1(Api) + 1(checksum)
+				  _pos = 0;
+				  _checksumTotal = 0;
+				  return;
             }else{
+            	//L'index 0 de notre trame décapsulé commence à Frame ID.
+            	//On ignore start delimiter (1 octet) + Length (2 octets) + Frame Type (1 octet)
               _response.getFrameDataPtr()[_pos - 4] = _byteData;
             }
             break;
