@@ -9,13 +9,14 @@
 #include "iSN\iSN.h"
 #include "uart_xb.h"
 #include "iSN\ZbeeStack.h"
-
+#include "Capteur\FakeCapteur.h"
 
 
 using namespace tomyClient;
 
 void iSNMain()
 {
+
 	XBeeConfig theAppConfig = {
 			57600,          //Baudrate (bps)
 			0,              //Serial PortNo
@@ -26,10 +27,12 @@ void iSNMain()
 	net.initialize(theAppConfig);
 
 	IsnClient client(&net, ISN_SENSOR_TEMP);
+	FakeCapteur capteur(&client);
 
 	while (true)
 	{
 		client.exec();
+		capteur.exec();
 	}
 }
 

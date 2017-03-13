@@ -16,6 +16,16 @@ inline uint8_t LSB16(int x)
 	return (x & 0xFF);
 }
 
+IsnMsgMeasure::IsnMsgMeasure(float m)
+{
+	_measure = m;
+	_length = 5;
+	_type = ISN_MSG_MEASURE;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = _type;
+	writeDataToBuffer<float>(&m,_buffer, 1);
+}
+
 IsnMsgConnectAck::IsnMsgConnectAck()
 {
 	_length = 1; //Frame_Type

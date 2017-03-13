@@ -126,7 +126,10 @@ class IsnMsgCommand : public IsnMessage
 
 class IsnMsgMeasure : public IsnMessage
 {
-
+public:
+	IsnMsgMeasure(float m);
+private:
+	float _measure;
 };
 
 class IsnMsgConnect : public IsnMessage
@@ -251,6 +254,7 @@ public:
 	IsnClient(Network* n, int device_type);
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
+	void sendMeasure(float m);
 private:
 	int _clientStatus;
 	int _deviceType;

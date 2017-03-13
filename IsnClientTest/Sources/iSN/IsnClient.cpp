@@ -27,6 +27,16 @@ void IsnClient::sendMessage(IsnMessage message)
 	_sendQueue.push_back(message);
 }
 
+void IsnClient::sendMeasure(float m)
+{
+	if (_clientStatus == ISN_CLIENTSTATE_CONNECTED)
+	{
+		IsnMsgMeasure msg(m);
+		sendMessage(msg);
+		unicast();
+	}
+}
+
 void IsnClient::exec()
 {
 	sendRecvMsg();
