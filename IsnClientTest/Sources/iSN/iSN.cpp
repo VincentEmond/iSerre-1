@@ -137,6 +137,20 @@ IsnMessage::~IsnMessage()
 	delete[] _buffer;
 }
 
+void IsnMessage::printPayload()
+{
+	printf("==================================\n");
+	printf("Donnees de la trame iSN\n");
+
+	for (int i=0; i<_length; i++)
+	{
+		printf("%02X", _buffer[i]);
+		printf(" ");
+	}
+	printf("\n");
+	printf("==================================\n");
+}
+
 void debugPrintPayload(tomyClient::NWResponse* resp)
 {
 	uint8_t* ptr = resp->getFrameDataPtr();
@@ -150,21 +164,6 @@ void debugPrintPayload(tomyClient::NWResponse* resp)
 	for (int i=0; i<length; i++)
 	{
 		printf("%02X", ptr[i]);
-		printf(" ");
-	}
-	printf("\n");
-	printf("==================================\n");
-}
-
-
-void IsnMessage::printPayload()
-{
-	printf("==================================\n");
-	printf("Donnees de la trame iSN\n");
-
-	for (int i=0; i<_length; i++)
-	{
-		printf("%02X", _buffer[i]);
 		printf(" ");
 	}
 	printf("\n");

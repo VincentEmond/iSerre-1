@@ -254,7 +254,7 @@ END_OF_SUBSCRIBE_LIST};
 	 debug_printf("start\n\r");
 	 network.initialize(theAppConfig.netCfg);
 #ifndef SINK_ACTI
-	 network.setRxHandler(networkRxCallback);
+	 //network.setRxHandler(networkRxCallback);
 #endif
  }
 

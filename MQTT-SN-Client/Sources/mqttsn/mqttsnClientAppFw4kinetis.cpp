@@ -49,21 +49,22 @@
 using namespace std;
 using namespace tomyClient;
 
-MqttsnClientApplication* theApplication = new MqttsnClientApplication();
-IsnServer* isnSrv = new IsnServer(network);
-
-
 
 extern TaskList theTaskList[];
 extern OnPublishList theOnPublishList[];
 extern APP_CONFIG    theAppConfig;
 extern void  setup();
 
+MqttsnClientApplication* theApplication = new MqttsnClientApplication();
+
 /*========================================
 		main function
 =========================================*/
 int mqttsnClientAppMain()
 {
+
+	IsnServer* isnSrv = new IsnServer(pNetwork, ISN_SENSOR_TEMP);
+
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);
 	theApplication->setClean(theAppConfig.mqttsnCfg.cleanSession);
@@ -117,7 +118,6 @@ void MqttsnClientApplication::stopWdt(){
 /*------------ Client execution  forever --------------*/
 int MqttsnClientApplication::run(){
 
-	printf("MQTT-SN doing work\n");
 	_wdTimer.wakeUp();
 	_mqttsn.readPacket();
 	int rc = _mqttsn.exec();

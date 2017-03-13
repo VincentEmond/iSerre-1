@@ -8,7 +8,7 @@
 #ifndef SOURCES_ISN_H_
 #define SOURCES_ISN_H_
 
-#include "mqttsn/zbeeStack.h"
+#include "zbeeStack.h"
 #include <stdint.h>
 #include "stdio.h"
 #include "string.h"
@@ -74,12 +74,13 @@ void isnRxCallback(tomyClient::NWResponse* resp, int* respCode);
 
 void debugPrintPayload(tomyClient::NWResponse* resp);
 
+
 class IsnMessage
 {
 public:
 	IsnMessage();
 	~IsnMessage();
-	IsnMessage(const IsnMessage&);
+	IsnMessage(const IsnMessage& msg);
 	uint8_t* getPayload();
 	uint8_t getLength();
 	void printPayload();
@@ -225,7 +226,7 @@ private:
 class IsnServer
 {
 public:
-	IsnServer(Network* net, int device_type);
+	IsnServer(Network& net);
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 private:
@@ -233,7 +234,7 @@ private:
 	vector<IsnClientInfo> _lstClients;
 	int sendRecvMsg();
 	XTimer _respTimer;
-	Network* _net;
+	Network _net;
 	Queue<IsnMessage> _sendQueue;
 	bool isAlreadyInList(IsnClientInfo&);
 	void sendMessage(IsnMessage message);
@@ -241,7 +242,6 @@ private:
 	void sendConnectAck();
 	int unicast();
 	int broadcast();
-	int _deviceType;
 
 };
 

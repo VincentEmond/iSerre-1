@@ -10,10 +10,12 @@
  * IsnServer
  */
 
-IsnServer::IsnServer(Network& net) : _net(net)
+IsnServer::IsnServer(Network* net, int device_type) : _net(net)
 {
 	theIsnServer = this;
 	_serverStatus = ISN_SERVERSTATE_IDLE;
+	_deviceType = device_type;
+	_net->setRxHandler(serverMessageHandler);
 }
 
 void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode)
@@ -33,12 +35,28 @@ int IsnServer::sendRecvMsg()
 
 	if (_serverStatus == ISN_SERVERSTATE_IDLE)
 	{
-		printf("iSN Server Idle\n");
+		/*vector<IsnClientInfo>::iterator it;
+
+			if (!_lstClients.empty())
+			{
+				for (it = _lstClients.begin(); it != _lstClients.end();  it++)
+				{
+					IsnClientInfo inf = *it;
+					NWAddress64 addr = inf.getClientAddress();
+					_net->setGwAddress(addr);
+					sendSearchAck();
+					unicast();
+				}
+			}
+		*/
+
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_CONNECT)
 	{
-		IsnClientInfo infos(_net.getGwAddress());
+		IsnClientInfo infos(_net->getGwAddress());
+
+		printf("ISN_SERVERSTATE_HANDLE_CONNECT\n");
 
 		if (!isAlreadyInList(infos))
 			_lstClients.push_back(infos);
@@ -50,12 +68,14 @@ int IsnServer::sendRecvMsg()
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_SEARCH)
 	{
+		printf("ISN_SERVERSTATE_HANDLE_SEARCH\n");
+
 		sendSearchAck();
 		unicast();
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
-	_net.readPacket();
+	_net->readPacket();
 
 	return rc;
 }
@@ -80,15 +100,27 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 {
 	uint8_t type = resp->getIsnType();
 
+	printf("Trame Recue:\n");
+	debugPrintPayload(resp);
+
+
+
 	if (type == ISN_MSG_SEARCH_SINK)
 	{
-		_net.setGwAddress(resp->getRemoteAddress64());
-		_serverStatus = ISN_SERVERSTATE_HANDLE_SEARCH;
+		//Il faut que le search sois pour le meme type de capteur
+		int dt = resp->getPayload(1);
+
+		if (dt == _deviceType)
+		{
+			_net->setGwAddress(resp->getRemoteAddress64());
+			_serverStatus = ISN_SERVERSTATE_HANDLE_SEARCH;
+		}
+
 	}
 
 	else if (type == ISN_MSG_CONNECT)
 	{
-		_net.setGwAddress(resp->getRemoteAddress64());
+		_net->setGwAddress(resp->getRemoteAddress64());
 		_serverStatus = ISN_SERVERSTATE_HANDLE_CONNECT;
 	}
 }
@@ -121,16 +153,18 @@ int IsnServer::unicast()
 	    if (msg == NULL)
 	    	return ISN_RC_NO_MESSAGE;
 
+	    msg->printPayload();
+
 	    //Essaye d'envoyer le message pour le nombre de retry
 	    do
 	    {
-	    	_net.send(msg->getPayload(), msg->getLength() , UcastReq);
+	    	_net->send(msg->getPayload(), msg->getLength() , UcastReq);
 
 	    	        _respTimer.start(msg->getTimeout() * 1000);
 	    	        msg->setMessageStatus(ISN_MSG_STATUS_WAITING);
 
 	    	        while(!_respTimer.isTimeUp()){
-	    	        	if(_net.readPacket() != PACKET_ERROR_NODATA){
+	    	        	if(_net->readPacket() != PACKET_ERROR_NODATA){
 	    					if (msg->getMessageStatus() == ISN_MSG_STATUS_COMPLETE){
 	    						_sendQueue.pop_front();
 	    						return ISN_RC_NO_ERROR;
@@ -161,13 +195,13 @@ int IsnServer::broadcast()
     //Essaye d'envoyer le message pour le nombre de retry
     do
     {
-    	_net.send(msg->getPayload(), msg->getLength() , BcastReq);
+    	_net->send(msg->getPayload(), msg->getLength() , BcastReq);
 
     	        _respTimer.start(msg->getTimeout() * 1000);
     	        msg->setMessageStatus(ISN_MSG_STATUS_WAITING);
 
     	        while(!_respTimer.isTimeUp()){
-    	        	if(_net.readPacket() != PACKET_ERROR_NODATA){
+    	        	if(_net->readPacket() != PACKET_ERROR_NODATA){
     					if (msg->getMessageStatus() == ISN_MSG_STATUS_COMPLETE){
     						_sendQueue.pop_front();
     						return ISN_RC_NO_ERROR;
