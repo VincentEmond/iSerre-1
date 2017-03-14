@@ -13,6 +13,9 @@
 #include "stdio.h"
 #include "string.h"
 #include <vector>
+#include "utility/stringUtility.h"
+#include "utility/conversion.h"
+#include "mqttsn\mqttsnClientAppFw4kinetis.h"
 
 using namespace std;
 using namespace tomyClient;
@@ -46,6 +49,7 @@ using namespace tomyClient;
 #define ISN_SERVERSTATE_IDLE			0x01
 #define ISN_SERVERSTATE_HANDLE_CONNECT	0x02
 #define ISN_SERVERSTATE_HANDLE_SEARCH	0x03
+#define ISN_SERVERSTATE_HANDLE_MEASURE  0x04
 
 //Timeout du client en s
 #define ISN_CLIENT_SEARCH_TIMEOUT		10
@@ -99,6 +103,41 @@ protected:
 	uint8_t _type;
 };
 
+class IsnConfigParam
+{
+public:
+	IsnConfigParam();
+	IsnConfigParam(uint8_t c, uint16_t v);
+	uint8_t code;
+	uint16_t value;
+};
+
+class IsnMsgConfig : public IsnMessage
+{
+public:
+	IsnMsgConfig(IsnConfigParam* params, uint8_t count);
+};
+
+class IsnConfiguration
+{
+public:
+	IsnMsgConfig getConfigMsg();
+protected:
+	uint8_t _length;
+};
+
+class IsnConfigurationTemperature : public IsnConfiguration
+{
+public:
+	IsnConfigurationTemperature();
+	IsnMsgConfig getConfigMsg();
+	void setSamplingRate(uint16_t sr);
+	uint16_t getSamplingRate();
+private:
+	uint16_t _samplingRate;
+};
+
+
 class IsnMsgSearchSink : public IsnMessage
 {
 public:
@@ -113,11 +152,6 @@ public:
 	IsnMsgSearchSinkAck();
 };
 
-class IsnMsgConfig : public IsnMessage
-{
-
-};
-
 class IsnMsgCommand : public IsnMessage
 {
 
@@ -125,7 +159,9 @@ class IsnMsgCommand : public IsnMessage
 
 class IsnMsgMeasure : public IsnMessage
 {
-
+public:
+	IsnMsgMeasure(uint8_t* buffer);
+	float getMeasure();
 };
 
 class IsnMsgConnect : public IsnMessage
@@ -225,7 +261,7 @@ private:
 class IsnServer
 {
 public:
-	IsnServer(Network* net, int device_type);
+	IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_type);
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 private:
@@ -242,6 +278,17 @@ private:
 	int unicast();
 	int broadcast();
 	int _deviceType;
+	MqttsnClientApplication* _mqtt;
+	float _measure;
+	MQString* TOPIC_TEMP_CAPTEUR;
+	MQString* TOPIC_TEMP_ACTION;
+	MQString* TOPIC_TEMP_CONFIG;
+	MQString* TOPIC_HUMID_CAPTEUR;
+	MQString* TOPIC_HUMID_ACTION;
+	MQString* TOPIC_HUMID_CONFIG;
+	MQString* TOPIC_LED_ETAT;
+	MQString* TOPIC_LED_INTENSITE;
+	MQString* TOPIC_LED_COULEUR;
 
 };
 

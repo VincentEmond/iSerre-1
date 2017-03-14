@@ -10,12 +10,25 @@
  * IsnServer
  */
 
-IsnServer::IsnServer(Network* net, int device_type) : _net(net)
+IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_type) : _net(net)
 {
 	theIsnServer = this;
 	_serverStatus = ISN_SERVERSTATE_IDLE;
 	_deviceType = device_type;
 	_net->setRxHandler(serverMessageHandler);
+	_mqtt = mqtt;
+
+	TOPIC_TEMP_CAPTEUR = 	new MQString("iserre/temperature/capteur");
+	TOPIC_TEMP_ACTION = 	new MQString("iserre/temperature/actionneur");
+	TOPIC_TEMP_CONFIG = 	new MQString("iserre/temperature/config");
+
+	TOPIC_HUMID_CAPTEUR = new MQString("iserre/humidite/capteur");
+	TOPIC_HUMID_ACTION = 	new MQString("iserre/humidite/actionneur");
+	TOPIC_HUMID_CONFIG = 	new MQString("iserre/humidite/config");
+
+	TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
+	TOPIC_LED_INTENSITE = new MQString("iserre/led/intensite");
+	TOPIC_LED_COULEUR = 	new MQString("iserre/led/couleur");
 }
 
 void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode)
@@ -75,6 +88,15 @@ int IsnServer::sendRecvMsg()
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
+	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_MEASURE)
+	{
+		printf("ISN_SERVERSTATE_HANDLE_MEASURE\n");
+		char str[20] = {0};
+		ftoa(_measure, str, 2);
+		_mqtt->publish(TOPIC_TEMP_CAPTEUR, str, strlen(str), QOS1);
+		_serverStatus = ISN_SERVERSTATE_IDLE;
+	}
+
 	_net->readPacket();
 
 	return rc;
@@ -122,6 +144,14 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	{
 		_net->setGwAddress(resp->getRemoteAddress64());
 		_serverStatus = ISN_SERVERSTATE_HANDLE_CONNECT;
+	}
+
+	else if (type == ISN_MSG_MEASURE)
+	{
+		IsnMsgMeasure msg(resp->getPayload());
+		float m = msg.getMeasure();
+		_measure = m;
+		_serverStatus = ISN_SERVERSTATE_HANDLE_MEASURE;
 	}
 }
 

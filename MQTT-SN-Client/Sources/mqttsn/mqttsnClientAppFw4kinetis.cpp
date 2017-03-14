@@ -63,7 +63,7 @@ MqttsnClientApplication* theApplication = new MqttsnClientApplication();
 int mqttsnClientAppMain()
 {
 
-	IsnServer* isnSrv = new IsnServer(pNetwork, ISN_SENSOR_TEMP);
+	IsnServer* isnSrv = new IsnServer(pNetwork, theApplication, ISN_SENSOR_TEMP);
 
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);

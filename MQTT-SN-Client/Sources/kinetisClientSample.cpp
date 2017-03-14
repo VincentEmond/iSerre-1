@@ -60,8 +60,8 @@ Network& network = *pNetwork;
 /*------------------------------------------------------
  *             Xbee module address
  *------------------------------------------------------*/
-NWAddress64 tempActuator(0x0013A200, 0x4103DD61);
-NWAddress64 ledActuator (0x0013A200, 0x40C1C448);
+//NWAddress64 tempActuator(0x0013A200, 0x4103DD61);
+//NWAddress64 ledActuator (0x0013A200, 0x40C1C448);
 
 /*------------------------------------------------------
  *             Create Topic
