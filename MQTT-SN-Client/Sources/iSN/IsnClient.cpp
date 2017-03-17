@@ -97,7 +97,7 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	}
 
 	//Si on recoit un connect ack et qu'on l'attend
-	else if (msgType == ISN_MSG_CONNECT_ACK
+	else if (msgType == ISN_MSG_CONFIG_ACK
 			&& msgSend != NULL
 			&& msgSend->getMessageStatus() == ISN_MSG_STATUS_WAITING
 			&& msgSend->getType() == ISN_MSG_CONNECT)

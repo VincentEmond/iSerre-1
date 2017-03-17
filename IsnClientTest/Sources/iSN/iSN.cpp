@@ -26,12 +26,12 @@ IsnMsgMeasure::IsnMsgMeasure(float m)
 	writeDataToBuffer<float>(&m,_buffer, 1);
 }
 
-IsnMsgConnectAck::IsnMsgConnectAck()
+IsnMsgConfigAck::IsnMsgConfigAck()
 {
 	_length = 1; //Frame_Type
 	_buffer = new uint8_t[_length];
-	_buffer[0] = ISN_MSG_CONNECT_ACK;
-	_type = ISN_MSG_CONNECT_ACK;
+	_buffer[0] = ISN_MSG_CONFIG_ACK;
+	_type = ISN_MSG_CONFIG_ACK;
 	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
@@ -218,5 +218,78 @@ bool IsnClientInfo::operator==(IsnClientInfo& other)
 /*
  * Fin ClientInfo
  */
+
+/*
+ * IsnConfig
+ */
+
+
+IsnConfigurationTemperature::IsnConfigurationTemperature()
+{
+	_samplingRate = 30;
+	_length = 1;
+}
+
+IsnConfigurationTemperature::IsnConfigurationTemperature(uint8_t* buffer)
+{
+	uint8_t count = buffer[1];
+	int offset = 2;
+
+	for (int i=0; i<count; i++)
+	{
+		uint8_t type = buffer[i*3+offset];
+		uint16_t val = buffer[i*3+offset+1];
+		val <<= 8;
+		val |= buffer[i*3+offset+2];
+
+		if (type == ISN_CONFIG_TEMP_SAMPLING)
+			_samplingRate = val;
+	}
+}
+
+void IsnConfigurationTemperature::setSamplingRate(uint16_t sr)
+{
+	_samplingRate = sr;
+}
+
+uint16_t IsnConfigurationTemperature::getSamplingRate()
+{
+	return _samplingRate;
+}
+
+IsnMsgConfig IsnConfigurationTemperature::getConfigMsg()
+{
+	IsnConfigParam params[_length];
+
+	params[0].code = ISN_CONFIG_TEMP_SAMPLING;
+	params[0].value = _samplingRate;
+
+	IsnMsgConfig msg(params, _length);
+
+	return msg;
+}
+
+IsnConfigParam::IsnConfigParam(uint8_t c, uint16_t v)
+{
+	code = c;
+	value = v;
+}
+
+IsnConfigParam::IsnConfigParam() {}
+
+IsnMsgConfig::IsnMsgConfig(IsnConfigParam* params, uint8_t count)
+{
+	_length = 1 + 1 + count * 3; //Type message + count + params 3 bytes par param
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_CONFIG;
+	_buffer[1] = count;
+
+	for (int i=0; i<count; i++)
+	{
+		int offset = i*3+2;
+		_buffer[offset] = params[i].code;
+		writeDataToBuffer<uint16_t>(&(params[i].value), _buffer, offset+1);
+	}
+}
 
 

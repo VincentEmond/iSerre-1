@@ -14,7 +14,8 @@
 #include "iSerre-SN.h"
 #include "SinkMeasureManager.h"
 #include "utility/StringUtility.h"
-#include <string.h>
+#include "utility/StringUtilCpp.h"
+#include "iSN/iSN.h"
 
 #define SINK_TEMP
 //#define SINK_HUMI
@@ -169,6 +170,31 @@ END_OF_TASK_LIST};
 #ifdef SINK_TEMP
 // Defines all tasks invoked by PUBLISH command packet for temperature sensor
 int tempConfigCallback(MqttsnPublish* msg){
+	string text(reinterpret_cast<char*>(msg->getData()));
+	vector<string> params = split(text, ";");
+	IsnConfigurationTemperature* tempConf = new IsnConfigurationTemperature();
+
+	for (vector<string>::iterator it = params.begin(); it != params.end(); it++)
+	{
+		string nameVal = *it;
+		vector<string> nameValSplit = split(nameVal, "=");
+
+		string name = nameValSplit[0];
+		string val = nameValSplit[1];
+		uint16_t numericValue;
+
+		if (name == "ISN_CONFIG_TEMP_SAMPLING")
+		{
+
+			numericValue = strtoul(val.c_str(), NULL, 10);
+			tempConf->setSamplingRate(numericValue);
+		}
+	}
+
+
+
+	isnSrv->setAndSendConfiguration(tempConf);
+
 	return 0;
 }
 #endif

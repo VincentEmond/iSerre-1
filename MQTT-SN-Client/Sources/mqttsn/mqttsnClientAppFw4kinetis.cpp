@@ -56,6 +56,7 @@ extern APP_CONFIG    theAppConfig;
 extern void  setup();
 
 MqttsnClientApplication* theApplication = new MqttsnClientApplication();
+IsnServer* isnSrv;
 
 /*========================================
 		main function
@@ -63,7 +64,7 @@ MqttsnClientApplication* theApplication = new MqttsnClientApplication();
 int mqttsnClientAppMain()
 {
 
-	IsnServer* isnSrv = new IsnServer(pNetwork, theApplication, ISN_SENSOR_TEMP);
+	isnSrv = new IsnServer(pNetwork, theApplication, ISN_SENSOR_TEMP);
 
 
 	theApplication->setKeepAlive(theAppConfig.mqttsnCfg.keepAlive);

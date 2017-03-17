@@ -3,7 +3,7 @@
   <Header>
     <Name>MQTT-SN-Client</Name>
     <SavedBy>Julien</SavedBy>
-    <ModificationStamp>13</ModificationStamp>
+    <ModificationStamp>15</ModificationStamp>
     <Date>2016-12-04</Date>
     <IDE>Eclipse IDE</IDE>
     <PEversion>1.12.2.RT7_b1550-0615</PEversion>
@@ -862,7 +862,7 @@
           <ItemSymbol>C_StackSize</ItemSymbol>
           <ReadOnly>false</ReadOnly>
           <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-          <Value>5632</Value>
+          <Value>4096</Value>
           <ItemWasNeverEnabledInChgScript>true</ItemWasNeverEnabledInChgScript>
           <Base>HEX</Base>
         </ItemState>
@@ -870,7 +870,7 @@
           <ItemSymbol>C_HeapSize</ItemSymbol>
           <ReadOnly>false</ReadOnly>
           <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-          <Value>5632</Value>
+          <Value>4096</Value>
           <ItemWasNeverEnabledInChgScript>true</ItemWasNeverEnabledInChgScript>
           <Base>HEX</Base>
         </ItemState>
@@ -21282,8 +21282,8 @@
         <UserReadOnly>false</UserReadOnly>
         <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
         <TypeSpecNameState>type_debugconsole_lpsci_clock_source</TypeSpecNameState>
-        <Index>0</Index>
-        <EnumSymbVal>kClockLpsciSrcNone</EnumSymbVal>
+        <Index>1</Index>
+        <EnumSymbVal>kClockLpsciSrcPllFllSel</EnumSymbVal>
       </ItemState>
       <ItemState>
         <ItemSymbol>LinkItem</ItemSymbol>

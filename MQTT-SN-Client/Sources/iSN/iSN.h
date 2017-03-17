@@ -27,7 +27,7 @@ using namespace tomyClient;
 #define ISN_MSG_COMMAND				0x03
 #define ISN_MSG_MEASURE				0x04
 #define ISN_MSG_CONNECT				0x07
-#define ISN_MSG_CONNECT_ACK			0x06
+#define ISN_MSG_CONFIG_ACK			0x06
 
 //Les types de matériel ISN
 #define ISN_SENSOR_TEMP				0x01
@@ -50,14 +50,22 @@ using namespace tomyClient;
 #define ISN_SERVERSTATE_HANDLE_CONNECT	0x02
 #define ISN_SERVERSTATE_HANDLE_SEARCH	0x03
 #define ISN_SERVERSTATE_HANDLE_MEASURE  0x04
+#define ISN_SERVERSTATE_SEND_CONFIG		0x05
 
 //Timeout du client en s
 #define ISN_CLIENT_SEARCH_TIMEOUT		10
 #define ISN_CLIENT_CONNECT_TIMEOUT		30
 
+//Timeout du serveur en s
+
+#define ISN_SERVER_CONFIG_TIMEOUT		10
+
 //Retry du client
 #define ISN_CLIENT_CONNECT_RETRY 	5
 #define ISN_CLIENT_SEARCH_RETRY		5
+
+//Retry du serveur
+#define ISN_SERVER_CONFIG_RETRY		5
 
 //Les statut du message
 #define ISN_MSG_STATUS_SEND_REQ		0x01
@@ -121,7 +129,8 @@ public:
 class IsnConfiguration
 {
 public:
-	IsnMsgConfig getConfigMsg();
+	virtual IsnMsgConfig getConfigMsg() = 0;
+	virtual ~IsnConfiguration();
 protected:
 	uint8_t _length;
 };
@@ -133,6 +142,7 @@ public:
 	IsnMsgConfig getConfigMsg();
 	void setSamplingRate(uint16_t sr);
 	uint16_t getSamplingRate();
+	~IsnConfigurationTemperature();
 private:
 	uint16_t _samplingRate;
 };
@@ -170,10 +180,10 @@ public:
 	IsnMsgConnect();
 };
 
-class IsnMsgConnectAck : public IsnMessage
+class IsnMsgConfigAck : public IsnMessage
 {
 public:
-	IsnMsgConnectAck();
+	IsnMsgConfigAck();
 };
 
 template <class T>
@@ -262,8 +272,11 @@ class IsnServer
 {
 public:
 	IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_type);
+	~IsnServer();
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
+	void setAndSendConfiguration(IsnConfiguration* config);
+	void initialize();
 private:
 	int _serverStatus;
 	vector<IsnClientInfo> _lstClients;
@@ -271,10 +284,13 @@ private:
 	XTimer _respTimer;
 	Network* _net;
 	Queue<IsnMessage> _sendQueue;
+	IsnConfiguration* _config;
 	bool isAlreadyInList(IsnClientInfo&);
 	void sendMessage(IsnMessage message);
 	void sendSearchAck();
-	void sendConnectAck();
+	void sendConfigAck();
+	void sendConfig();
+	void sendConfigToAll();
 	int unicast();
 	int broadcast();
 	int _deviceType;

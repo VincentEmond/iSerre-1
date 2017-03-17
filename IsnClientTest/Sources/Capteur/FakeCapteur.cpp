@@ -15,6 +15,12 @@ FakeCapteur::FakeCapteur(IsnClient* client)
 	_initTimer = false;
 }
 
+void FakeCapteur::setConfig(IsnConfiguration* conf)
+{
+	IsnConfigurationTemperature* confTemp = static_cast<IsnConfigurationTemperature*>(conf);
+	_config = *confTemp;
+}
+
 void FakeCapteur::exec()
 {
 	if(!_initTimer)

@@ -16,12 +16,12 @@ inline uint8_t LSB16(int x)
 	return (x & 0xFF);
 }
 
-IsnMsgConnectAck::IsnMsgConnectAck()
+IsnMsgConfigAck::IsnMsgConfigAck()
 {
 	_length = 1; //Frame_Type
 	_buffer = new uint8_t[_length];
-	_buffer[0] = ISN_MSG_CONNECT_ACK;
-	_type = ISN_MSG_CONNECT_ACK;
+	_buffer[0] = ISN_MSG_CONFIG_ACK;
+	_type = ISN_MSG_CONFIG_ACK;
 	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
@@ -124,6 +124,12 @@ uint8_t IsnMessage::getRetry()
 {
 	return _nbRetry;
 }
+
+void IsnMessage::setRetry(uint8_t r)
+{
+	_nbRetry = r;
+}
+
 
 IsnMessage::IsnMessage()
 {
@@ -238,6 +244,10 @@ IsnConfigurationTemperature::IsnConfigurationTemperature()
 	_length = 1;
 }
 
+IsnConfiguration::~IsnConfiguration() {}
+
+IsnConfigurationTemperature::~IsnConfigurationTemperature() {}
+
 void IsnConfigurationTemperature::setSamplingRate(uint16_t sr)
 {
 	_samplingRate = sr;
@@ -266,20 +276,23 @@ IsnConfigParam::IsnConfigParam(uint8_t c, uint16_t v)
 	value = v;
 }
 
+IsnConfigParam::IsnConfigParam() {}
+
 IsnMsgConfig::IsnMsgConfig(IsnConfigParam* params, uint8_t count)
 {
-	_length = 1 + 1 + count * sizeof(IsnConfigParam); //Type message + count + params
+	_length = 1 + 1 + count * 3; //Type message + count + params 3 bytes par param
 	_buffer = new uint8_t[_length];
 	_buffer[0] = ISN_MSG_CONFIG;
 	_buffer[1] = count;
 
 	for (int i=0; i<count; i++)
 	{
-		int offset = i*sizeof(IsnConfigParam)+2;
+		int offset = i*3+2;
 		_buffer[offset] = params[i].code;
 		writeDataToBuffer<uint16_t>(&(params[i].value), _buffer, offset+1);
 	}
 }
+
 
 
 

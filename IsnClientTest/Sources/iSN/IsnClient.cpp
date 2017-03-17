@@ -7,6 +7,7 @@
 
 #include "iSN.h"
 #include "UART_Com0.h"
+#include "Capteur/FakeCapteur.h"
 
 /*
  *	IsnClient
@@ -121,18 +122,47 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		_clientStatus = ISN_CLIENTSTATE_SINK_FOUND;
 	}
 
-	//Si on recoit un connect ack et qu'on l'attend
-	else if (msgType == ISN_MSG_CONNECT_ACK
+	//Si on recoit un config suite a un connect qu'on l'attend
+	else if (msgType == ISN_MSG_CONFIG
 			&& msgSend != NULL
 			&& msgSend->getMessageStatus() == ISN_MSG_STATUS_WAITING
 			&& msgSend->getType() == ISN_MSG_CONNECT)
 	{
+
+		switch (_deviceType)
+		{
+		case ISN_SENSOR_TEMP:
+			IsnConfigurationTemperature conf(resp->getPayload());
+			_capteur->setConfig(&conf);
+			break;
+		}
+
 		//Marque le message CONNECT comme traite
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
+
+		sendConfigAck();
+		unicast();
+
 		//Entre dans l'etat CONNECTE
 		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
 	}
 
+	//Si on recoit un config et qu'on ne l'attend pas alors le serveur
+	//n'a pas recu le config ack ou nous envoie une trame de config
+	else if (msgType == ISN_MSG_CONFIG
+			&& (msgSend == NULL || msgSend->getType() != ISN_MSG_CONNECT))
+	{
+
+		switch (_deviceType)
+		{
+		case ISN_SENSOR_TEMP:
+			IsnConfigurationTemperature conf(resp->getPayload());
+			_capteur->setConfig(&conf);
+			break;
+		}
+		sendConfigAck();
+		unicast();
+	}
 
 }
 
@@ -148,6 +178,12 @@ void IsnClient::sendConnect()
 	IsnMsgConnect message;
 	sendMessage(message);
 	_clientStatus = ISN_CLIENSTATE_CONNECT_SENT;
+}
+
+void IsnClient::sendConfigAck()
+{
+	IsnMsgConfigAck ack;
+	sendMessage(ack);
 }
 
 int IsnClient::broadcast()
@@ -226,6 +262,11 @@ int IsnClient::unicast()
 		_sendQueue.pop_front();
 
 	    return ISN_RC_RETRY_OVER;
+}
+
+void IsnClient::setCapteur(Capteur* c)
+{
+	_capteur = c;
 }
 
 /*

@@ -24,7 +24,7 @@ using namespace tomyClient;
 #define ISN_MSG_COMMAND				0x03
 #define ISN_MSG_MEASURE				0x04
 #define ISN_MSG_CONNECT				0x07
-#define ISN_MSG_CONNECT_ACK			0x06
+#define ISN_MSG_CONFIG_ACK			0x06
 
 //Les types de matériel ISN
 #define ISN_SENSOR_TEMP				0x01
@@ -51,9 +51,16 @@ using namespace tomyClient;
 #define ISN_CLIENT_SEARCH_TIMEOUT		10
 #define ISN_CLIENT_CONNECT_TIMEOUT		30
 
+//Timeout du serveur en s
+
+#define ISN_SERVER_CONFIG_TIMEOUT		10
+
 //Retry du client
 #define ISN_CLIENT_CONNECT_RETRY 	5
 #define ISN_CLIENT_SEARCH_RETRY		5
+
+//Retry du serveur
+#define ISN_SERVER_CONFIG_RETRY		5
 
 //Les statut du message
 #define ISN_MSG_STATUS_SEND_REQ		0x01
@@ -74,6 +81,7 @@ void isnRxCallback(tomyClient::NWResponse* resp, int* respCode);
 
 void debugPrintPayload(tomyClient::NWResponse* resp);
 
+class Capteur;
 
 class IsnMessage
 {
@@ -100,6 +108,41 @@ protected:
 	uint8_t _type;
 };
 
+class IsnConfigParam
+{
+public:
+	IsnConfigParam();
+	IsnConfigParam(uint8_t c, uint16_t v);
+	uint8_t code;
+	uint16_t value;
+};
+
+class IsnMsgConfig : public IsnMessage
+{
+public:
+	IsnMsgConfig(IsnConfigParam* params, uint8_t count);
+};
+
+class IsnConfiguration
+{
+public:
+	virtual IsnMsgConfig getConfigMsg() = 0;
+protected:
+	uint8_t _length;
+};
+
+class IsnConfigurationTemperature : public IsnConfiguration
+{
+public:
+	IsnConfigurationTemperature();
+	IsnConfigurationTemperature(uint8_t* buffer);
+	IsnMsgConfig getConfigMsg();
+	void setSamplingRate(uint16_t sr);
+	uint16_t getSamplingRate();
+private:
+	uint16_t _samplingRate;
+};
+
 class IsnMsgSearchSink : public IsnMessage
 {
 public:
@@ -112,11 +155,6 @@ class IsnMsgSearchSinkAck : public IsnMessage
 {
 public:
 	IsnMsgSearchSinkAck();
-};
-
-class IsnMsgConfig : public IsnMessage
-{
-
 };
 
 class IsnMsgCommand : public IsnMessage
@@ -138,10 +176,10 @@ public:
 	IsnMsgConnect();
 };
 
-class IsnMsgConnectAck : public IsnMessage
+class IsnMsgConfigAck : public IsnMessage
 {
 public:
-	IsnMsgConnectAck();
+	IsnMsgConfigAck();
 };
 
 template <class T>
@@ -255,6 +293,7 @@ public:
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 	void sendMeasure(float m);
+	void setCapteur(Capteur* c);
 private:
 	int _clientStatus;
 	int _deviceType;
@@ -262,11 +301,13 @@ private:
 	Queue<IsnMessage> _sendQueue;
 	void sendMessage(IsnMessage message);
 	void sendSearchSink();
+	void sendConfigAck();
 	void sendConnect();
 	int broadcast();
 	int unicast();
 	int sendRecvMsg();
 	XTimer _respTimer;
+	Capteur* _capteur;
 };
 
 

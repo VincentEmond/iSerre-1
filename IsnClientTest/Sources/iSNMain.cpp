@@ -28,6 +28,7 @@ void iSNMain()
 
 	IsnClient client(&net, ISN_SENSOR_TEMP);
 	FakeCapteur capteur(&client);
+	client.setCapteur(&capteur);
 
 	while (true)
 	{

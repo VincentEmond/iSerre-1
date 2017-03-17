@@ -29,6 +29,57 @@ IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_typ
 	TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
 	TOPIC_LED_INTENSITE = new MQString("iserre/led/intensite");
 	TOPIC_LED_COULEUR = 	new MQString("iserre/led/couleur");
+
+	switch (_deviceType)
+	{
+	case ISN_SENSOR_TEMP:
+		_config = new IsnConfigurationTemperature();
+	break;
+	}
+
+
+}
+
+void IsnServer::initialize()
+{
+
+}
+
+IsnServer::~IsnServer()
+{
+	delete _config;
+}
+
+void IsnServer::sendConfigToAll()
+{
+	IsnMsgConfig conf = _config->getConfigMsg();
+	conf.setTimeout(ISN_SERVER_CONFIG_TIMEOUT);
+	conf.setRetry(ISN_SERVER_CONFIG_RETRY);
+
+	vector<IsnClientInfo>::iterator it;
+
+	for (it = _lstClients.begin(); it !=_lstClients.end(); it++)
+	{
+		NWAddress64 addr = it->getClientAddress();
+
+		_net->setGwAddress(addr);
+		sendMessage(conf);
+		int rc = unicast();
+
+		//Si on a pas de reponse du client alors on le considere mort.
+		if (rc != ISN_RC_NO_ERROR)
+			_lstClients.erase(it);
+	}
+
+}
+
+
+
+void IsnServer::setAndSendConfiguration(IsnConfiguration* config)
+{
+	delete _config;
+	_config = config;
+	_serverStatus = ISN_SERVERSTATE_SEND_CONFIG;
 }
 
 void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode)
@@ -71,11 +122,15 @@ int IsnServer::sendRecvMsg()
 
 		printf("ISN_SERVERSTATE_HANDLE_CONNECT\n");
 
-		if (!isAlreadyInList(infos))
-			_lstClients.push_back(infos);
+		sendConfig();
+		int rc = unicast();
 
-		sendConnectAck();
-		unicast();
+		if (rc == ISN_RC_NO_ERROR)
+		{
+			if (!isAlreadyInList(infos))
+				_lstClients.push_back(infos);
+		}
+
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
@@ -94,6 +149,13 @@ int IsnServer::sendRecvMsg()
 		char str[20] = {0};
 		ftoa(_measure, str, 2);
 		_mqtt->publish(TOPIC_TEMP_CAPTEUR, str, strlen(str), QOS1);
+		_serverStatus = ISN_SERVERSTATE_IDLE;
+	}
+
+	else if (_serverStatus == ISN_SERVERSTATE_SEND_CONFIG)
+	{
+		printf("ISN_SERVERSTATE_SEND_CONFIG\n");
+		sendConfigToAll();
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
@@ -121,6 +183,12 @@ bool IsnServer::isAlreadyInList(IsnClientInfo& item)
 void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode)
 {
 	uint8_t type = resp->getIsnType();
+	IsnMessage* current = _sendQueue.frontP();
+	bool sameAddress = false;
+
+	if (current != NULL)
+		sameAddress = _net->getGwAddress() == resp->getRemoteAddress64();
+
 
 	printf("Trame Recue:\n");
 	debugPrintPayload(resp);
@@ -140,6 +208,15 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 
 	}
 
+	else if (type == ISN_MSG_CONFIG_ACK &&
+			current != NULL &&
+			current->getType() == ISN_MSG_CONFIG &&
+			current->getMessageStatus() == ISN_MSG_STATUS_WAITING &&
+			sameAddress)
+	{
+		current->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
+	}
+
 	else if (type == ISN_MSG_CONNECT)
 	{
 		_net->setGwAddress(resp->getRemoteAddress64());
@@ -155,9 +232,9 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	}
 }
 
-void IsnServer::sendConnectAck()
+void IsnServer::sendConfigAck()
 {
-	IsnMsgConnectAck ack;
+	IsnMsgConfigAck ack;
 	sendMessage(ack);
 }
 
@@ -165,6 +242,14 @@ void IsnServer::sendSearchAck()
 {
 	IsnMsgSearchSinkAck ack;
 	sendMessage(ack);
+}
+
+void IsnServer::sendConfig()
+{
+	IsnMsgConfig conf = _config->getConfigMsg();
+	conf.setRetry(ISN_SERVER_CONFIG_RETRY);
+	conf.setTimeout(ISN_SERVER_CONFIG_TIMEOUT);
+	sendMessage(conf);
 }
 
 void IsnServer::sendMessage(IsnMessage message)

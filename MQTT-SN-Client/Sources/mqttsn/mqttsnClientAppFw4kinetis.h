@@ -40,6 +40,7 @@
 
 #include "mqttsnClient.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,6 +55,8 @@ extern uint16_t getUint16(uint8_t* pos);
 extern uint32_t getUint32(uint8_t* pos);
 extern void setUint16(uint8_t* pos, uint16_t val);
 extern void setUint32(uint8_t* pos, uint32_t val);
+
+class IsnServer;
 
 /*======================================
                Class WdTimer
@@ -118,6 +121,7 @@ private:
 };
 
 extern MqttsnClientApplication* theApplication;
+extern IsnServer* isnSrv;
 extern tomyClient::Network* pNetwork;
 extern tomyClient::Network& network;
 
