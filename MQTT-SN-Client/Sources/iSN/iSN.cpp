@@ -280,6 +280,7 @@ IsnConfigParam::IsnConfigParam() {}
 
 IsnMsgConfig::IsnMsgConfig(IsnConfigParam* params, uint8_t count)
 {
+	_type = ISN_MSG_CONFIG;
 	_length = 1 + 1 + count * 3; //Type message + count + params 3 bytes par param
 	_buffer = new uint8_t[_length];
 	_buffer[0] = ISN_MSG_CONFIG;

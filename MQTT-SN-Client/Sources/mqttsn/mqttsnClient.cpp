@@ -269,9 +269,11 @@ void MqttsnClient::delayTime(uint16_t maxTime){
 #endif
     XTimer delayTimer;
     delayTimer.start(tm);
+    debug_printf("Avant\n");
     while(!delayTimer.isTimeUp()){
        _network->readPacket();
     }
+    debug_printf("Apres\n");
 }
 
 void MqttsnClient::copyMsg(MqttsnMessage* msg, NWResponse* recvMsg){

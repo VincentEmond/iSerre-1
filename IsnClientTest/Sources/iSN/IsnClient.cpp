@@ -85,6 +85,14 @@ int IsnClient::sendRecvMsg()
 		}
 	}
 
+	else if (_clientStatus == ISN_CLIENTSTATE_CONFIG_RECEIVED)
+	{
+		debug_printf("ISN_CLIENTSTATE_CONFIG_RECEIVED\n");
+		sendConfigAck();
+		unicast();
+		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
+	}
+
 	else if (_clientStatus == ISN_CLIENTSTATE_CONNECTED)
 	{
 		debug_printf("ISN_CLIENTSTATE_CONNECTED\n");
@@ -140,11 +148,10 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		//Marque le message CONNECT comme traite
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
 
-		sendConfigAck();
-		unicast();
+
 
 		//Entre dans l'etat CONNECTE
-		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
+		_clientStatus = ISN_CLIENTSTATE_CONFIG_RECEIVED;
 	}
 
 	//Si on recoit un config et qu'on ne l'attend pas alors le serveur

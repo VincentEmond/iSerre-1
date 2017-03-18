@@ -7,11 +7,11 @@
 
 #include "Clock.h"
 
-static volatile uint64_t Clock_currentMs = 0;
+static volatile uint64_t Clock_currentMs = 1;
 
 void Clock_resetMsCounter()
 {
-	Clock_currentMs = 0;
+	Clock_currentMs = 1;
 }
 
 void Clock_incrementMsCounter()

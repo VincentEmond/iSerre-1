@@ -3,7 +3,7 @@
   <Header>
     <Name>MQTT-SN-Client</Name>
     <SavedBy>Julien</SavedBy>
-    <ModificationStamp>15</ModificationStamp>
+    <ModificationStamp>23</ModificationStamp>
     <Date>2016-12-04</Date>
     <IDE>Eclipse IDE</IDE>
     <PEversion>1.12.2.RT7_b1550-0615</PEversion>
@@ -847,7 +847,7 @@
         <ItemState>
           <ItemSymbol>InitializationState</ItemSymbol>
           <ReadOnly>false</ReadOnly>
-          <Value>Defaul_PE_initialization</Value>
+          <Value>User_PE_initialization</Value>
           <ItemWasNeverEnabledInChgScript>true</ItemWasNeverEnabledInChgScript>
         </ItemState>
         <ItemState>
@@ -862,7 +862,7 @@
           <ItemSymbol>C_StackSize</ItemSymbol>
           <ReadOnly>false</ReadOnly>
           <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-          <Value>4096</Value>
+          <Value>5632</Value>
           <ItemWasNeverEnabledInChgScript>true</ItemWasNeverEnabledInChgScript>
           <Base>HEX</Base>
         </ItemState>
@@ -870,7 +870,7 @@
           <ItemSymbol>C_HeapSize</ItemSymbol>
           <ReadOnly>false</ReadOnly>
           <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-          <Value>4096</Value>
+          <Value>5632</Value>
           <ItemWasNeverEnabledInChgScript>true</ItemWasNeverEnabledInChgScript>
           <Base>HEX</Base>
         </ItemState>
@@ -21282,8 +21282,8 @@
         <UserReadOnly>false</UserReadOnly>
         <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
         <TypeSpecNameState>type_debugconsole_lpsci_clock_source</TypeSpecNameState>
-        <Index>1</Index>
-        <EnumSymbVal>kClockLpsciSrcPllFllSel</EnumSymbVal>
+        <Index>0</Index>
+        <EnumSymbVal>kClockLpsciSrcNone</EnumSymbVal>
       </ItemState>
       <ItemState>
         <ItemSymbol>LinkItem</ItemSymbol>

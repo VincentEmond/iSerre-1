@@ -41,6 +41,7 @@ using namespace tomyClient;
 #define ISN_CLIENTSTATE_CONNECTED		0x02
 #define ISN_CLIENTSTATE_SEARCH_SENT		0x03
 #define ISN_CLIENTSTATE_SINK_FOUND		0x04
+#define ISN_CLIENTSTATE_CONFIG_RECEIVED 0x05
 
 //Les etats du serveur
 #define ISN_SERVERSTATE_IDLE			0x01

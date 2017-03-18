@@ -170,7 +170,9 @@ END_OF_TASK_LIST};
 #ifdef SINK_TEMP
 // Defines all tasks invoked by PUBLISH command packet for temperature sensor
 int tempConfigCallback(MqttsnPublish* msg){
-	string text(reinterpret_cast<char*>(msg->getData()));
+
+	uint8_t* data = msg->getData();
+	string text(reinterpret_cast<char*>(data));
 	vector<string> params = split(text, ";");
 	IsnConfigurationTemperature* tempConf = new IsnConfigurationTemperature();
 

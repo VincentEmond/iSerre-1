@@ -315,7 +315,8 @@ XTimer::XTimer(){
 }
 
 void XTimer::start(uint32_t msec){
-	_startTime = Clock_getMsCount();
+	uint64_t time = Clock_getMsCount();
+	_startTime = time;
 	_millis = (uint64_t)msec;
 }
 
