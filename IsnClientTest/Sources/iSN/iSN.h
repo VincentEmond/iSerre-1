@@ -82,7 +82,7 @@ void isnRxCallback(tomyClient::NWResponse* resp, int* respCode);
 
 void debugPrintPayload(tomyClient::NWResponse* resp);
 
-class Capteur;
+class CommonSensor;
 
 class IsnMessage
 {
@@ -128,6 +128,7 @@ class IsnConfiguration
 {
 public:
 	virtual IsnMsgConfig getConfigMsg() = 0;
+	virtual ~IsnConfiguration();
 protected:
 	uint8_t _length;
 };
@@ -137,6 +138,7 @@ class IsnConfigurationTemperature : public IsnConfiguration
 public:
 	IsnConfigurationTemperature();
 	IsnConfigurationTemperature(uint8_t* buffer);
+	~IsnConfigurationTemperature();
 	IsnMsgConfig getConfigMsg();
 	void setSamplingRate(uint16_t sr);
 	uint16_t getSamplingRate();
@@ -294,7 +296,7 @@ public:
 	void exec();
 	void receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 	void sendMeasure(float m);
-	void setCapteur(Capteur* c);
+	void setSensor(CommonSensor* c);
 private:
 	int _clientStatus;
 	int _deviceType;
@@ -308,7 +310,9 @@ private:
 	int unicast();
 	int sendRecvMsg();
 	XTimer _respTimer;
-	Capteur* _capteur;
+	XTimer _SamplingTimer;
+	CommonSensor* _sensor;
+	IsnConfiguration* _config;
 };
 
 

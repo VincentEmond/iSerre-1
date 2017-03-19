@@ -223,6 +223,8 @@ bool IsnClientInfo::operator==(IsnClientInfo& other)
  * IsnConfig
  */
 
+IsnConfiguration::~IsnConfiguration() {}
+IsnConfigurationTemperature::~IsnConfigurationTemperature() {}
 
 IsnConfigurationTemperature::IsnConfigurationTemperature()
 {

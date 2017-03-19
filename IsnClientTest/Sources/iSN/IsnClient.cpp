@@ -8,6 +8,7 @@
 #include "iSN.h"
 #include "UART_Com0.h"
 #include "Capteur/FakeCapteur.h"
+#include "IsnBuildConfig.h"
 
 /*
  *	IsnClient
@@ -25,11 +26,13 @@ IsnClient::IsnClient(Network* n, int device_type)
 
 void IsnClient::sendMessage(IsnMessage message)
 {
+	//Push the message to the end of the Queue, we will send it when ready.
 	_sendQueue.push_back(message);
 }
 
 void IsnClient::sendMeasure(float m)
 {
+	//Send a measure to the connected sink
 	if (_clientStatus == ISN_CLIENTSTATE_CONNECTED)
 	{
 		IsnMsgMeasure msg(m);
@@ -38,16 +41,18 @@ void IsnClient::sendMeasure(float m)
 	}
 }
 
+//This function is called once in every iteration of the infinite loop.
 void IsnClient::exec()
 {
 	sendRecvMsg();
 }
 
+//This function is the bulk of the IsnClient it is called on every iteration
+//of the infinite loop. The client decide what to do by looking at its current state.
 int IsnClient::sendRecvMsg()
 {
+	//Return code for this function by default there's no error if an error occur then we change this value.
 	int rc = ISN_RC_NO_ERROR;
-
-
 
 	//Si le client n'est pas connecté il faut envoyé un search sink
 	if (_clientStatus == ISN_CLIENTSTATE_NOT_CONNECTED)
@@ -69,6 +74,7 @@ int IsnClient::sendRecvMsg()
 			}
 	}
 
+	//What to do when a sink answered with a SEARCH_SINK_ACK
 	else if (_clientStatus == ISN_CLIENTSTATE_SINK_FOUND)
 	{
 		debug_printf("ISN_CLIENTSTATE_SINK_FOUND\n");
@@ -85,32 +91,58 @@ int IsnClient::sendRecvMsg()
 		}
 	}
 
+	//What to do when the CONFIG frame is received during the connection phase.
 	else if (_clientStatus == ISN_CLIENTSTATE_CONFIG_RECEIVED)
 	{
 		debug_printf("ISN_CLIENTSTATE_CONFIG_RECEIVED\n");
 		sendConfigAck();
 		unicast();
+#ifdef SENSOR_TEMP
+		IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
+		//Start a timer for the publication of the sensor's measures.
+		_SamplingTimer.start(conf->getSamplingRate() * 1000);
+#endif
 		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
 	}
 
 	else if (_clientStatus == ISN_CLIENTSTATE_CONNECTED)
 	{
-		debug_printf("ISN_CLIENTSTATE_CONNECTED\n");
+		//If the publish timer time is up then we must send our measure to the sink.
+		if (_SamplingTimer.isTimeUp())
+		{
+			float measure;
+			_sensor->read_sensor(&measure);
+			sendMeasure(measure);
+#ifdef SENSOR_TEMP
+			IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
+			//Restart the timer for the next publish.
+			_SamplingTimer.start(conf->getSamplingRate() * 1000);
+#endif
+		}
 	}
 
+	//Read the next frame from the Network receive buffer or do nothing if there's nothing to read.
 	_net->readPacket();
 
 	return rc;
 }
 
+//This is a wrapper for the UART RX callback internal to the client.
+//We register the callback with the Network object but ISO C++ forbid
+//passing a pointer to a member function as a callback so we must use
+//a global function instead. theIsnClient is a global variable set to point
+//to the IsnClient instance. We consider that IsnClient is a singleton.
 void clientMessageHandler(tomyClient::NWResponse* resp, int* respCode)
 {
 	theIsnClient->receiveMessageHandler(resp, respCode);
 }
 
+//This function is called when IsnClient receive a Isn Frame on the network.
 void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode)
 {
+	//Get the type of Isn Message received.
 	uint8_t msgType = resp->getIsnType();
+	//Get a pointer to the message in the front of the Send Queue or NULL if the Queue is empty
 	IsnMessage* msgSend = _sendQueue.frontP();
 
 	printf("Trame Recue:\n");
@@ -130,20 +162,22 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		_clientStatus = ISN_CLIENTSTATE_SINK_FOUND;
 	}
 
-	//Si on recoit un config suite a un connect qu'on l'attend
+	//Si on recoit un config suite a un connect et qu'on l'attend
 	else if (msgType == ISN_MSG_CONFIG
 			&& msgSend != NULL
 			&& msgSend->getMessageStatus() == ISN_MSG_STATUS_WAITING
 			&& msgSend->getType() == ISN_MSG_CONNECT)
 	{
+#ifdef SENSOR_TEMP
 
-		switch (_deviceType)
-		{
-		case ISN_SENSOR_TEMP:
-			IsnConfigurationTemperature conf(resp->getPayload());
-			_capteur->setConfig(&conf);
-			break;
-		}
+		//If we compile for the temperature sensor then we create a IsnConfigurationTemperature instance.
+			IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
+#endif
+
+			if (_config != NULL)
+				//We must delete the configuration object before replacing it because it was dynamically created.
+				delete _config;
+			_config = conf;
 
 		//Marque le message CONNECT comme traite
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
@@ -160,13 +194,12 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 			&& (msgSend == NULL || msgSend->getType() != ISN_MSG_CONNECT))
 	{
 
-		switch (_deviceType)
-		{
-		case ISN_SENSOR_TEMP:
-			IsnConfigurationTemperature conf(resp->getPayload());
-			_capteur->setConfig(&conf);
-			break;
-		}
+#ifdef SENSOR_TEMP
+		IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
+#endif
+		if (_config != NULL)
+			delete _config;
+		_config = conf;
 		sendConfigAck();
 		unicast();
 	}
@@ -271,9 +304,10 @@ int IsnClient::unicast()
 	    return ISN_RC_RETRY_OVER;
 }
 
-void IsnClient::setCapteur(Capteur* c)
+void IsnClient::setSensor(CommonSensor* c)
 {
-	_capteur = c;
+	_sensor = c;
+	_sensor->init_sensor();
 }
 
 /*

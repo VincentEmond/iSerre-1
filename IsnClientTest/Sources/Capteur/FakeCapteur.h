@@ -11,25 +11,25 @@
 #include "iSN\mqUtil.h"
 #include "iSN\iSN.h"
 
-class Capteur
+class CommonSensor
 {
 public:
-	virtual void setConfig(IsnConfiguration* conf) = 0;
+	virtual void init_sensor() = 0;
+	virtual void read_sensor(float* val) = 0;
+	virtual ~CommonSensor();
 };
 
-class FakeCapteur : public Capteur
+class FakeCapteur : public CommonSensor
 {
 	public:
 		FakeCapteur(IsnClient* client);
+		~FakeCapteur();
 		void exec();
-		void setConfig(IsnConfiguration* conf);
+		void init_sensor();
+		void read_sensor(float* val);
 	private:
 		float _mesure;
-		XTimer _samplingTimer;
-		int _samplingRate;
 		IsnClient* _client;
-		IsnConfigurationTemperature _config;
-		bool _initTimer;
 };
 
 
