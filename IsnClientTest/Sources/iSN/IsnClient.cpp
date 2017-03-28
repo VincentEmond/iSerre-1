@@ -9,6 +9,7 @@
 #include "UART_Com0.h"
 #include "Capteur/FakeCapteur.h"
 #include "IsnBuildConfig.h"
+#include <time.h>
 
 /*
  *	IsnClient
@@ -21,6 +22,7 @@ IsnClient::IsnClient(Network* n, int device_type)
 	_deviceType = device_type;
 	theIsnClient = this;
 	_net->setRxHandler(clientMessageHandler);
+	_configInitialized = false;
 
 }
 
@@ -110,14 +112,16 @@ int IsnClient::sendRecvMsg()
 		//If the publish timer time is up then we must send our measure to the sink.
 		if (_SamplingTimer.isTimeUp())
 		{
+		#ifdef SENSOR_TEMP
+			IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
+			//Restart the timer for the next publish.
+
+		#endif
+			delayTime(conf->getSamplingDelay());
 			float measure;
 			_sensor->read_sensor(&measure);
 			sendMeasure(measure);
-#ifdef SENSOR_TEMP
-			IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
-			//Restart the timer for the next publish.
 			_SamplingTimer.start(conf->getSamplingRate() * 1000);
-#endif
 		}
 	}
 
@@ -174,10 +178,12 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 			IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
 #endif
 
-			if (_config != NULL)
+			if (_configInitialized)
 				//We must delete the configuration object before replacing it because it was dynamically created.
 				delete _config;
 			_config = conf;
+
+			_configInitialized = true;
 
 		//Marque le message CONNECT comme traite
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
@@ -197,7 +203,7 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 #ifdef SENSOR_TEMP
 		IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
 #endif
-		if (_config != NULL)
+		if (_configInitialized)
 			delete _config;
 		_config = conf;
 		sendConfigAck();
@@ -308,6 +314,15 @@ void IsnClient::setSensor(CommonSensor* c)
 {
 	_sensor = c;
 	_sensor->init_sensor();
+}
+
+void IsnClient::delayTime(uint16_t maxTime){
+    srand((uint32_t)time( 0 ));
+    uint32_t tm = (rand() % (maxTime * 1000));
+    XTimer delayTimer;
+    delayTimer.start(tm);
+    while(!delayTimer.isTimeUp())
+       ;
 }
 
 /*

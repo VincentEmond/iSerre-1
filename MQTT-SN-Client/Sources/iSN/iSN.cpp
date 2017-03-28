@@ -241,7 +241,8 @@ bool IsnClientInfo::operator==(IsnClientInfo& other)
 IsnConfigurationTemperature::IsnConfigurationTemperature()
 {
 	_samplingRate = 30;
-	_length = 1;
+	_samplingDelay = 5;
+	_length = 2;
 }
 
 IsnConfiguration::~IsnConfiguration() {}
@@ -258,12 +259,24 @@ uint16_t IsnConfigurationTemperature::getSamplingRate()
 	return _samplingRate;
 }
 
+uint16_t IsnConfigurationTemperature::getSamplingDelay()
+{
+	return _samplingDelay;
+}
+
+void IsnConfigurationTemperature::setSamplingDelay(uint16_t dl)
+{
+	_samplingDelay = dl;
+}
+
 IsnMsgConfig IsnConfigurationTemperature::getConfigMsg()
 {
 	IsnConfigParam params[_length];
 
 	params[0].code = ISN_CONFIG_TEMP_SAMPLING;
 	params[0].value = _samplingRate;
+	params[1].code = ISN_CONFIG_SAMPLING_DELAY;
+	params[1].value = _samplingDelay;
 
 	IsnMsgConfig msg(params, _length);
 

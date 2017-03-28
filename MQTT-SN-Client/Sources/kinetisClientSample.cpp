@@ -185,12 +185,18 @@ int tempConfigCallback(MqttsnPublish* msg){
 		string val = nameValSplit[1];
 		uint16_t numericValue;
 
+		numericValue = strtoul(val.c_str(), NULL, 10);
+
 		if (name == "ISN_CONFIG_TEMP_SAMPLING")
 		{
-
-			numericValue = strtoul(val.c_str(), NULL, 10);
 			tempConf->setSamplingRate(numericValue);
 		}
+		else if (name == "ISN_CONFIG_SAMPLING_DELAY")
+		{
+			tempConf->setSamplingDelay(numericValue);
+		}
+
+
 	}
 
 

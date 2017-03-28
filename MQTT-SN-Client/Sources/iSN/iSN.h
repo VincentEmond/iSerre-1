@@ -36,7 +36,8 @@ using namespace tomyClient;
 #define ISN_ACTI_HUMI				0x82
 
 //Les codes de configuration
-#define ISN_CONFIG_TEMP_SAMPLING	0x01
+#define ISN_CONFIG_TEMP_SAMPLING	0x01 //The sensor is read at each interval of this param.
+#define ISN_CONFIG_SAMPLING_DELAY	0x02 //The measure is sent with a random delay.
 
 //Les etats du client
 #define ISN_CLIENTSTATE_NOT_CONNECTED 	0x00
@@ -143,8 +144,11 @@ public:
 	void setSamplingRate(uint16_t sr);
 	uint16_t getSamplingRate();
 	~IsnConfigurationTemperature();
+	uint16_t getSamplingDelay();
+	void setSamplingDelay(uint16_t dl);
 private:
 	uint16_t _samplingRate;
+	uint16_t _samplingDelay;
 };
 
 

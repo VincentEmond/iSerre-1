@@ -246,6 +246,8 @@ IsnConfigurationTemperature::IsnConfigurationTemperature(uint8_t* buffer)
 
 		if (type == ISN_CONFIG_TEMP_SAMPLING)
 			_samplingRate = val;
+		else if (type == ISN_CONFIG_SAMPLING_DELAY)
+			_samplingDelay = val;
 	}
 }
 
@@ -257,6 +259,16 @@ void IsnConfigurationTemperature::setSamplingRate(uint16_t sr)
 uint16_t IsnConfigurationTemperature::getSamplingRate()
 {
 	return _samplingRate;
+}
+
+uint16_t IsnConfigurationTemperature::getSamplingDelay()
+{
+	return _samplingDelay;
+}
+
+void IsnConfigurationTemperature::setSamplingDelay(uint16_t dl)
+{
+	_samplingDelay = dl;
 }
 
 IsnMsgConfig IsnConfigurationTemperature::getConfigMsg()
