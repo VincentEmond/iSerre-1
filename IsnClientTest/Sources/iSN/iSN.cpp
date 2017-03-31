@@ -258,14 +258,14 @@ IsnConfigurationTemperature::~IsnConfigurationTemperature() {}
 IsnConfigurationTemperature::IsnConfigurationTemperature()
 {
 	_samplingRate = 30;
-	_length = 1;
+	_length = 2;
 	_samplingDelay = 5;
 }
 
 IsnConfiguration::IsnConfiguration()
 {
 	_samplingRate = 30;
-	_length = 1;
+	_length = 2;
 	_samplingDelay = 5;
 }
 
