@@ -16,6 +16,7 @@
 #include "utility/stringUtility.h"
 #include "utility/conversion.h"
 #include "mqttsn\mqttsnClientAppFw4kinetis.h"
+#include "IsnBuildConfig.h"
 
 using namespace std;
 using namespace tomyClient;
@@ -28,6 +29,9 @@ using namespace tomyClient;
 #define ISN_MSG_MEASURE				0x04
 #define ISN_MSG_CONNECT				0x07
 #define ISN_MSG_CONFIG_ACK			0x06
+#define ISN_MSG_NOT_CONNECTED		0x08
+#define ISN_MSG_PING				0x09
+#define ISN_MSG_PING_ACK			0x0A
 
 //Les types de matériel ISN
 #define ISN_SENSOR_TEMP				0x01
@@ -50,8 +54,9 @@ using namespace tomyClient;
 #define ISN_SERVERSTATE_IDLE			0x01
 #define ISN_SERVERSTATE_HANDLE_CONNECT	0x02
 #define ISN_SERVERSTATE_HANDLE_SEARCH	0x03
-#define ISN_SERVERSTATE_HANDLE_MEASURE  0x04
 #define ISN_SERVERSTATE_SEND_CONFIG		0x05
+#define ISN_SERVERSTATE_SEND_MEASURE	0x06
+#define ISN_SERVERSTATE_HANDLE_PING		0x07
 
 //Timeout du client en s
 #define ISN_CLIENT_SEARCH_TIMEOUT		10
@@ -68,6 +73,17 @@ using namespace tomyClient;
 //Retry du serveur
 #define ISN_SERVER_CONFIG_RETRY		5
 
+//The server will publish the average in intervals of this setting
+#define ISN_SERVER_CONFIG_PUBLISH_DELAY	30
+
+//If some sensors failed to transmit their measure in time
+//the server will wait for this amount of time to give them a chance to transmit.
+#define ISN_SERVER_CONFIG_GRACE_DELAY	10
+
+//The number of time a sensor is allowed to fail to transmit its measure
+//before it is disconnected.
+#define ISN_SERVER_CONFIG_MISS_LIMIT	4
+
 //Les statut du message
 #define ISN_MSG_STATUS_SEND_REQ		0x01
 #define ISN_MSG_STATUS_WAITING		0x02
@@ -77,6 +93,7 @@ using namespace tomyClient;
 #define ISN_RC_NO_MESSAGE	0x01
 #define ISN_RC_NO_ERROR 	0x02
 #define ISN_RC_RETRY_OVER	0x03
+#define ISN_RC_INVALID_MEASURE 9999.99
 
 typedef void(*NetworkCallback)(tomyClient::NWResponse*, int*);
 
@@ -130,25 +147,25 @@ public:
 class IsnConfiguration
 {
 public:
-	virtual IsnMsgConfig getConfigMsg() = 0;
+	IsnConfiguration();
+	virtual IsnMsgConfig getConfigMsg();
 	virtual ~IsnConfiguration();
+	uint16_t getSamplingDelay();
+	void setSamplingDelay(uint16_t dl);
+	void setSamplingRate(uint16_t sr);
+	uint16_t getSamplingRate();
 protected:
 	uint8_t _length;
+	uint16_t _samplingRate;
+	uint16_t _samplingDelay;
 };
 
 class IsnConfigurationTemperature : public IsnConfiguration
 {
 public:
 	IsnConfigurationTemperature();
-	IsnMsgConfig getConfigMsg();
-	void setSamplingRate(uint16_t sr);
-	uint16_t getSamplingRate();
 	~IsnConfigurationTemperature();
-	uint16_t getSamplingDelay();
-	void setSamplingDelay(uint16_t dl);
-private:
-	uint16_t _samplingRate;
-	uint16_t _samplingDelay;
+
 };
 
 
@@ -182,6 +199,24 @@ class IsnMsgConnect : public IsnMessage
 {
 public:
 	IsnMsgConnect();
+};
+
+class IsnMsgPing : public IsnMessage
+{
+public:
+	IsnMsgPing();
+};
+
+class IsnMsgNotConnected : public IsnMessage
+{
+public:
+	IsnMsgNotConnected();
+};
+
+class IsnMsgPingAck : public IsnMessage
+{
+public:
+	IsnMsgPingAck();
 };
 
 class IsnMsgConfigAck : public IsnMessage
@@ -264,12 +299,22 @@ void Queue<T>::pop_front()
 class IsnClientInfo
 {
 public:
+	IsnClientInfo();
 	NWAddress64 getClientAddress();
 	void setClientAddress(NWAddress64 addr);
 	IsnClientInfo(NWAddress64 addr);
 	bool operator==(IsnClientInfo& other);
+	float getMeasure();
+	bool isNewValue();
+	uint8_t getNbMissed();
+	void setMeasure(float measure);
+	void setNewValue(bool newValue);
+	void setNbMissed(uint8_t nbMissed);
 private:
 	NWAddress64 _addr;
+	uint8_t _nbMissed;
+	float _measure;
+	bool _newValue;
 };
 
 class IsnServer
@@ -286,29 +331,36 @@ private:
 	vector<IsnClientInfo> _lstClients;
 	int sendRecvMsg();
 	XTimer _respTimer;
+	XTimer _publishTimer;
 	Network* _net;
 	Queue<IsnMessage> _sendQueue;
 	IsnConfiguration* _config;
+	IsnClientInfo* getClientInfo(NWAddress64& addr);
 	bool isAlreadyInList(IsnClientInfo&);
+	bool allMeasuresArrived();
 	void sendMessage(IsnMessage message);
 	void sendSearchAck();
 	void sendConfigAck();
 	void sendConfig();
 	void sendConfigToAll();
+	void sendNotConnected();
+	void sendPingAck();
+	void removeFromList(IsnClientInfo&);
+	void applyPenalties();
 	int unicast();
 	int broadcast();
+	float computeAverage();
 	int _deviceType;
 	MqttsnClientApplication* _mqtt;
 	float _measure;
-	MQString* TOPIC_TEMP_CAPTEUR;
-	MQString* TOPIC_TEMP_ACTION;
-	MQString* TOPIC_TEMP_CONFIG;
-	MQString* TOPIC_HUMID_CAPTEUR;
-	MQString* TOPIC_HUMID_ACTION;
-	MQString* TOPIC_HUMID_CONFIG;
+	MQString* TOPIC_CAPTEUR;
+	MQString* TOPIC_ACTION;
+	MQString* TOPIC_CONFIG;
+#ifdef ACTIVATOR_LED
 	MQString* TOPIC_LED_ETAT;
 	MQString* TOPIC_LED_INTENSITE;
 	MQString* TOPIC_LED_COULEUR;
+#endif
 
 };
 

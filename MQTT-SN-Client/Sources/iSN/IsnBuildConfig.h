@@ -12,4 +12,5 @@
 //#define SENSOR_HUMI
 //#define ACTIVATOR_LED
 
+
 #endif /* SOURCES_ISN_ISNBUILDCONFIG_H_ */

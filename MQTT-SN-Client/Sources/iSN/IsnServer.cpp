@@ -18,26 +18,28 @@ IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_typ
 	_net->setRxHandler(serverMessageHandler);
 	_mqtt = mqtt;
 
-	TOPIC_TEMP_CAPTEUR = 	new MQString("iserre/temperature/capteur");
-	TOPIC_TEMP_ACTION = 	new MQString("iserre/temperature/actionneur");
-	TOPIC_TEMP_CONFIG = 	new MQString("iserre/temperature/config");
 
-	TOPIC_HUMID_CAPTEUR = new MQString("iserre/humidite/capteur");
-	TOPIC_HUMID_ACTION = 	new MQString("iserre/humidite/actionneur");
-	TOPIC_HUMID_CONFIG = 	new MQString("iserre/humidite/config");
-
+#ifdef SENSOR_TEMP
+	TOPIC_CAPTEUR = new MQString("iserre/temperature/capteur");
+	TOPIC_ACTION = 	new MQString("iserre/temperature/actionneur");
+	TOPIC_CONFIG = 	new MQString("iserre/temperature/config");
+#endif
+#ifdef SENSOR_HUMI
+	TOPIC_CAPTEUR = new MQString("iserre/humidite/capteur");
+	TOPIC_ACTION = 	new MQString("iserre/humidite/actionneur");
+	TOPIC_CONFIG = 	new MQString("iserre/humidite/config");
+#endif
+#ifdef ACTIVATOR_LED
 	TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
 	TOPIC_LED_INTENSITE = new MQString("iserre/led/intensite");
 	TOPIC_LED_COULEUR = 	new MQString("iserre/led/couleur");
-
-	switch (_deviceType)
-	{
-	case ISN_SENSOR_TEMP:
-		_config = new IsnConfigurationTemperature();
-	break;
-	}
+#endif
 
 
+	_config = new IsnConfiguration();
+
+	//This start the timer that is used to publish the sensor's measure.
+	this->_publishTimer.start(ISN_SERVER_CONFIG_PUBLISH_DELAY * 1000);
 }
 
 void IsnServer::initialize()
@@ -73,6 +75,40 @@ void IsnServer::sendConfigToAll()
 
 }
 
+void IsnServer::removeFromList(IsnClientInfo& info)
+{
+	vector<IsnClientInfo>::iterator it;
+
+	for (it = _lstClients.begin(); it !=_lstClients.end(); it++)
+	{
+		if (info == *it)
+		{
+			_lstClients.erase(it);
+			break;
+		}
+	}
+}
+
+//If a sensor did not send its value in time even after the grace period
+//then a penalty is applied to it. After a fixed amount of miss in a row it is considered
+//dead and removed from the list of sensors.
+void IsnServer::applyPenalties()
+{
+	vector<IsnClientInfo>::iterator it;
+
+	for (it = _lstClients.begin(); it !=_lstClients.end(); it++)
+	{
+		if (!(it->isNewValue()))
+		{
+			uint8_t miss = it->getNbMissed();
+			miss++;
+			if (miss >= ISN_SERVER_CONFIG_MISS_LIMIT)
+				_lstClients.erase(it);
+			else
+				it->setNbMissed(miss);
+		}
+	}
+}
 
 
 void IsnServer::setAndSendConfiguration(IsnConfiguration* config)
@@ -114,6 +150,24 @@ int IsnServer::sendRecvMsg()
 			}
 		*/
 
+		if (this->_publishTimer.isTimeUp())
+			_serverStatus = ISN_SERVERSTATE_SEND_MEASURE;
+
+	}
+
+	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_PING)
+	{
+		printf("ISN_SERVERSTATE_HANDLE_PING\n");
+
+		IsnClientInfo infos(_net->getGwAddress());
+		if (isAlreadyInList(infos))
+			sendPingAck();
+		else
+			sendNotConnected();
+
+		unicast();
+
+		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_CONNECT)
@@ -143,12 +197,32 @@ int IsnServer::sendRecvMsg()
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
-	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_MEASURE)
+	else if (_serverStatus == ISN_SERVERSTATE_SEND_MEASURE)
 	{
-		printf("ISN_SERVERSTATE_HANDLE_MEASURE\n");
-		char str[20] = {0};
-		ftoa(_measure, str, 2);
-		_mqtt->publish(TOPIC_TEMP_CAPTEUR, str, strlen(str), QOS1);
+		printf("ISN_SERVERSTATE_SEND_MEASURE\n");
+		float measure;
+
+		if (!allMeasuresArrived())
+		{
+			XTimer gracePeriod;
+			gracePeriod.start(ISN_SERVER_CONFIG_GRACE_DELAY * 1000);
+
+			while (!gracePeriod.isTimeUp())
+				_net->readPacket();
+
+			if (!allMeasuresArrived())
+				applyPenalties();
+		}
+
+		measure = computeAverage();
+
+		if (measure != ISN_RC_INVALID_MEASURE)
+		{
+			char str[20] = {0};
+			ftoa(measure, str, 2);
+			_mqtt->publish(TOPIC_CAPTEUR, str, strlen(str), QOS1);
+		}
+
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
 
@@ -178,6 +252,69 @@ bool IsnServer::isAlreadyInList(IsnClientInfo& item)
 	}
 
 	return false;
+}
+
+bool IsnServer::allMeasuresArrived()
+{
+	vector<IsnClientInfo>::iterator it;
+
+	if (_lstClients.empty())
+		return true;
+
+	for (it = _lstClients.begin(); it != _lstClients.end();  it++)
+	{
+		if (!(it->isNewValue()))
+			return false;
+	}
+
+	return true;
+}
+
+//Allow us to search for a client with its network address.
+IsnClientInfo* IsnServer::getClientInfo(NWAddress64& addr)
+{
+	vector<IsnClientInfo>::iterator it;
+
+		if (_lstClients.empty())
+			return NULL;
+
+		for (it = _lstClients.begin(); it != _lstClients.end();  it++)
+		{
+			if (addr == it->getClientAddress())
+				return &(*it);
+		}
+
+		return NULL;
+}
+
+float IsnServer::computeAverage()
+{
+	float total = 0.0;
+	uint8_t sum = 0;
+
+	if (this->_lstClients.size() == 0)
+		return ISN_RC_INVALID_MEASURE;
+
+	vector<IsnClientInfo>::iterator it;
+
+	for (it=this->_lstClients.begin(); it!=this->_lstClients.end(); it++)
+	{
+		//Only consider new values to compute the average. To ensure accuracy.
+		if (it->isNewValue())
+		{
+			total++;
+			sum+=it->getMeasure();
+			it->setNewValue(false);
+		}
+	}
+
+	//All measure are old values.
+	if (sum == 0)
+		return ISN_RC_INVALID_MEASURE;
+
+	float average = sum / total;
+
+	return average;
 }
 
 void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCode)
@@ -227,8 +364,21 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	{
 		IsnMsgMeasure msg(resp->getPayload());
 		float m = msg.getMeasure();
-		_measure = m;
-		_serverStatus = ISN_SERVERSTATE_HANDLE_MEASURE;
+
+		IsnClientInfo* infos = this->getClientInfo(resp->getRemoteAddress64());
+
+		if (infos != NULL)
+		{
+			infos->setMeasure(m);
+			infos->setNewValue(true);
+			infos->setNbMissed(0);
+		}
+	}
+
+	else if (type == ISN_MSG_PING)
+	{
+		_net->setGwAddress(resp->getRemoteAddress64());
+		_serverStatus = ISN_SERVERSTATE_HANDLE_PING;
 	}
 }
 
@@ -236,6 +386,18 @@ void IsnServer::sendConfigAck()
 {
 	IsnMsgConfigAck ack;
 	sendMessage(ack);
+}
+
+void IsnServer::sendPingAck()
+{
+	IsnMsgPingAck ack;
+	sendMessage(ack);
+}
+
+void IsnServer::sendNotConnected()
+{
+	IsnMsgNotConnected nc;
+	sendMessage(nc);
 }
 
 void IsnServer::sendSearchAck()

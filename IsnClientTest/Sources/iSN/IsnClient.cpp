@@ -99,11 +99,12 @@ int IsnClient::sendRecvMsg()
 		debug_printf("ISN_CLIENTSTATE_CONFIG_RECEIVED\n");
 		sendConfigAck();
 		unicast();
-#ifdef SENSOR_TEMP
-		IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
+
 		//Start a timer for the publication of the sensor's measures.
-		_SamplingTimer.start(conf->getSamplingRate() * 1000);
-#endif
+		_SamplingTimer.start(_config->getSamplingRate() * 1000);
+		//Start the keep alive timer.
+		this->_keepAliveTimer.start(ISN_CLIENT_CONFIG_KEEP_ALIVE * 1000);
+
 		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
 	}
 
@@ -112,16 +113,25 @@ int IsnClient::sendRecvMsg()
 		//If the publish timer time is up then we must send our measure to the sink.
 		if (_SamplingTimer.isTimeUp())
 		{
-		#ifdef SENSOR_TEMP
-			IsnConfigurationTemperature* conf = static_cast<IsnConfigurationTemperature*>(_config);
-			//Restart the timer for the next publish.
-
-		#endif
-			delayTime(conf->getSamplingDelay());
+			delayTime(_config->getSamplingDelay());
 			float measure;
 			_sensor->read_sensor(&measure);
 			sendMeasure(measure);
-			_SamplingTimer.start(conf->getSamplingRate() * 1000);
+			_SamplingTimer.start(_config->getSamplingRate() * 1000);
+		}
+
+		//If we haven't heard from the sink for the keep alive delay we must ping the
+		//sink to make sure it is still alive. Otherwise the sensor will send values
+		//to a non-existent sink forever. If the sink doesn't answer we need to reconnect.
+		//If the sink sends a NotConnected message then we need to reconnect.
+		if (_keepAliveTimer.isTimeUp())
+		{
+			sendPing();
+			int rc = unicast();
+			if (rc == ISN_RC_RETRY_OVER)
+				_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
+			else
+				this->_keepAliveTimer.start(ISN_CLIENT_CONFIG_KEEP_ALIVE * 1000);
 		}
 	}
 
@@ -152,6 +162,13 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	printf("Trame Recue:\n");
 	debugPrintPayload(resp);
 
+	//If the client is connected and receive something from the sink then reset the keep alive timer
+	if (this->_clientStatus == ISN_CLIENTSTATE_CONNECTED)
+	{
+		if (this->_net->getGwAddress() == resp->getRemoteAddress64())
+			this->_keepAliveTimer.start(ISN_CLIENT_CONFIG_KEEP_ALIVE * 1000);
+	}
+
 	//Si on recoit un SEARCH_SINK_ACK et qu'on l'attend
 	if (msgType == ISN_MSG_SEARCH_SINK_ACK
 			&& msgSend != NULL
@@ -172,11 +189,9 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 			&& msgSend->getMessageStatus() == ISN_MSG_STATUS_WAITING
 			&& msgSend->getType() == ISN_MSG_CONNECT)
 	{
-#ifdef SENSOR_TEMP
 
-		//If we compile for the temperature sensor then we create a IsnConfigurationTemperature instance.
-			IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
-#endif
+			IsnConfiguration* conf = new IsnConfiguration(resp->getPayload());
+
 
 			if (_configInitialized)
 				//We must delete the configuration object before replacing it because it was dynamically created.
@@ -200,14 +215,30 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 			&& (msgSend == NULL || msgSend->getType() != ISN_MSG_CONNECT))
 	{
 
-#ifdef SENSOR_TEMP
-		IsnConfigurationTemperature* conf = new IsnConfigurationTemperature(resp->getPayload());
-#endif
+		IsnConfiguration* conf = new IsnConfiguration(resp->getPayload());
+
 		if (_configInitialized)
 			delete _config;
 		_config = conf;
 		sendConfigAck();
 		unicast();
+	}
+
+	//If we receive a ping ack and we were expecting it.
+	else if (msgType == ISN_MSG_PING_ACK
+			&& msgSend != NULL
+			&& msgSend->getType() == ISN_MSG_PING)
+	{
+		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
+	}
+
+	//If we receive a not connected in response to a ping.
+	else if (msgType == ISN_MSG_NOT_CONNECTED
+				&& msgSend != NULL
+				&& msgSend->getType() == ISN_MSG_PING)
+	{
+		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
+		_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
 	}
 
 }
@@ -224,6 +255,12 @@ void IsnClient::sendConnect()
 	IsnMsgConnect message;
 	sendMessage(message);
 	_clientStatus = ISN_CLIENSTATE_CONNECT_SENT;
+}
+
+void IsnClient::sendPing()
+{
+	IsnMsgPing ping;
+	sendMessage(ping);
 }
 
 void IsnClient::sendConfigAck()

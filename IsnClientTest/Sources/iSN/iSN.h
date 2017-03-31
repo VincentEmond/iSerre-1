@@ -13,6 +13,7 @@
 #include "stdio.h"
 #include "string.h"
 #include <vector>
+#include "IsnBuildConfig.h"
 
 using namespace std;
 using namespace tomyClient;
@@ -25,6 +26,9 @@ using namespace tomyClient;
 #define ISN_MSG_MEASURE				0x04
 #define ISN_MSG_CONNECT				0x07
 #define ISN_MSG_CONFIG_ACK			0x06
+#define ISN_MSG_NOT_CONNECTED		0x08
+#define ISN_MSG_PING				0x09
+#define ISN_MSG_PING_ACK			0x0A
 
 //Les types de matériel ISN
 #define ISN_SENSOR_TEMP				0x01
@@ -52,6 +56,10 @@ using namespace tomyClient;
 //Timeout du client en s
 #define ISN_CLIENT_SEARCH_TIMEOUT		10
 #define ISN_CLIENT_CONNECT_TIMEOUT		30
+
+//Amount of time before the client sends a ping to
+//the sink to make sure it is still connected.
+#define ISN_CLIENT_CONFIG_KEEP_ALIVE	600
 
 //Timeout du serveur en s
 
@@ -128,26 +136,28 @@ public:
 class IsnConfiguration
 {
 public:
-	virtual IsnMsgConfig getConfigMsg() = 0;
+	IsnConfiguration(uint8_t* buffer);
+	IsnConfiguration();
+	virtual IsnMsgConfig getConfigMsg();
 	virtual ~IsnConfiguration();
+	void setSamplingRate(uint16_t sr);
+	uint16_t getSamplingRate();
+	uint16_t getSamplingDelay();
+	void setSamplingDelay(uint16_t dl);
 protected:
 	uint8_t _length;
+	uint16_t _samplingRate;
+	uint16_t _samplingDelay;
 };
 
 class IsnConfigurationTemperature : public IsnConfiguration
 {
 public:
 	IsnConfigurationTemperature();
-	IsnConfigurationTemperature(uint8_t* buffer);
+
 	~IsnConfigurationTemperature();
-	IsnMsgConfig getConfigMsg();
-	void setSamplingRate(uint16_t sr);
-	uint16_t getSamplingRate();
-	uint16_t getSamplingDelay();
-	void setSamplingDelay(uint16_t dl);
-private:
-	uint16_t _samplingRate;
-	uint16_t _samplingDelay;
+
+
 };
 
 class IsnMsgSearchSink : public IsnMessage
@@ -182,6 +192,25 @@ class IsnMsgConnect : public IsnMessage
 public:
 	IsnMsgConnect();
 };
+
+class IsnMsgPing : public IsnMessage
+{
+public:
+	IsnMsgPing();
+};
+
+class IsnMsgNotConnected : public IsnMessage
+{
+public:
+	IsnMsgNotConnected();
+};
+
+class IsnMsgPingAck : public IsnMessage
+{
+public:
+	IsnMsgPingAck();
+};
+
 
 class IsnMsgConfigAck : public IsnMessage
 {
@@ -311,11 +340,13 @@ private:
 	void sendSearchSink();
 	void sendConfigAck();
 	void sendConnect();
+	void sendPing();
 	int broadcast();
 	int unicast();
 	int sendRecvMsg();
 	XTimer _respTimer;
 	XTimer _SamplingTimer;
+	XTimer _keepAliveTimer;
 	CommonSensor* _sensor;
 	IsnConfiguration* _config;
 	void delayTime(uint16_t maxTime);

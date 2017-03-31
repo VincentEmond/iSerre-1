@@ -68,6 +68,35 @@ IsnMsgConnect::IsnMsgConnect() : IsnMessage()
 	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
+IsnMsgPing::IsnMsgPing()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_PING;
+	_type = ISN_MSG_PING;
+	_timeout = ISN_CLIENT_CONNECT_TIMEOUT;
+	_nbRetry = ISN_CLIENT_CONNECT_RETRY;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgNotConnected::IsnMsgNotConnected()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_NOT_CONNECTED;
+	_type = ISN_MSG_NOT_CONNECTED;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgPingAck::IsnMsgPingAck()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_PING_ACK;
+	_type = ISN_MSG_PING_ACK;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
 template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startIndex)
 {
 	uint8_t* dataBytes = (uint8_t*)data;
@@ -230,9 +259,18 @@ IsnConfigurationTemperature::IsnConfigurationTemperature()
 {
 	_samplingRate = 30;
 	_length = 1;
+	_samplingDelay = 5;
 }
 
-IsnConfigurationTemperature::IsnConfigurationTemperature(uint8_t* buffer)
+IsnConfiguration::IsnConfiguration()
+{
+	_samplingRate = 30;
+	_length = 1;
+	_samplingDelay = 5;
+}
+
+
+IsnConfiguration::IsnConfiguration(uint8_t* buffer)
 {
 	uint8_t count = buffer[1];
 	int offset = 2;
@@ -251,32 +289,34 @@ IsnConfigurationTemperature::IsnConfigurationTemperature(uint8_t* buffer)
 	}
 }
 
-void IsnConfigurationTemperature::setSamplingRate(uint16_t sr)
+void IsnConfiguration::setSamplingRate(uint16_t sr)
 {
 	_samplingRate = sr;
 }
 
-uint16_t IsnConfigurationTemperature::getSamplingRate()
+uint16_t IsnConfiguration::getSamplingRate()
 {
 	return _samplingRate;
 }
 
-uint16_t IsnConfigurationTemperature::getSamplingDelay()
+uint16_t IsnConfiguration::getSamplingDelay()
 {
 	return _samplingDelay;
 }
 
-void IsnConfigurationTemperature::setSamplingDelay(uint16_t dl)
+void IsnConfiguration::setSamplingDelay(uint16_t dl)
 {
 	_samplingDelay = dl;
 }
 
-IsnMsgConfig IsnConfigurationTemperature::getConfigMsg()
+IsnMsgConfig IsnConfiguration::getConfigMsg()
 {
 	IsnConfigParam params[_length];
 
 	params[0].code = ISN_CONFIG_TEMP_SAMPLING;
 	params[0].value = _samplingRate;
+	params[1].code = ISN_CONFIG_SAMPLING_DELAY;
+	params[1].value = _samplingDelay;
 
 	IsnMsgConfig msg(params, _length);
 

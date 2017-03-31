@@ -58,6 +58,35 @@ IsnMsgConnect::IsnMsgConnect() : IsnMessage()
 	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
 }
 
+IsnMsgPing::IsnMsgPing()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_PING;
+	_type = ISN_MSG_PING;
+	_timeout = ISN_CLIENT_CONNECT_TIMEOUT;
+	_nbRetry = ISN_CLIENT_CONNECT_RETRY;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgNotConnected::IsnMsgNotConnected()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_NOT_CONNECTED;
+	_type = ISN_MSG_NOT_CONNECTED;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
+IsnMsgPingAck::IsnMsgPingAck()
+{
+	_length = 1;
+	_buffer = new uint8_t[_length];
+	_buffer[0] = ISN_MSG_PING_ACK;
+	_type = ISN_MSG_PING_ACK;
+	_msgStatus = ISN_MSG_STATUS_SEND_REQ;
+}
+
 IsnMsgMeasure::IsnMsgMeasure(uint8_t* buffer)
 {
 	_length = 5;
@@ -222,6 +251,38 @@ NWAddress64 IsnClientInfo::getClientAddress()
 	return _addr;
 }
 
+IsnClientInfo::IsnClientInfo()
+{
+	this->_measure = 0.0;
+	this->_nbMissed = 0;
+	this->_newValue = false;
+}
+
+float IsnClientInfo::getMeasure()
+{
+	return this->_measure;
+}
+
+bool IsnClientInfo::isNewValue()
+{
+	return this->_newValue;
+}
+uint8_t IsnClientInfo::getNbMissed()
+{
+	return this->_nbMissed;
+}
+void IsnClientInfo::setMeasure(float measure)
+{
+	this->_measure = measure;
+}
+void IsnClientInfo::setNewValue(bool newValue)
+{
+	this->_newValue = newValue;
+}
+void IsnClientInfo::setNbMissed(uint8_t nbMissed)
+{
+	this->_nbMissed = nbMissed;
+}
 
 bool IsnClientInfo::operator==(IsnClientInfo& other)
 {
@@ -245,31 +306,38 @@ IsnConfigurationTemperature::IsnConfigurationTemperature()
 	_length = 2;
 }
 
+IsnConfiguration::IsnConfiguration()
+{
+	_samplingRate = 30;
+	_samplingDelay = 5;
+	_length = 2;
+}
+
 IsnConfiguration::~IsnConfiguration() {}
 
 IsnConfigurationTemperature::~IsnConfigurationTemperature() {}
 
-void IsnConfigurationTemperature::setSamplingRate(uint16_t sr)
+void IsnConfiguration::setSamplingRate(uint16_t sr)
 {
 	_samplingRate = sr;
 }
 
-uint16_t IsnConfigurationTemperature::getSamplingRate()
+uint16_t IsnConfiguration::getSamplingRate()
 {
 	return _samplingRate;
 }
 
-uint16_t IsnConfigurationTemperature::getSamplingDelay()
+uint16_t IsnConfiguration::getSamplingDelay()
 {
 	return _samplingDelay;
 }
 
-void IsnConfigurationTemperature::setSamplingDelay(uint16_t dl)
+void IsnConfiguration::setSamplingDelay(uint16_t dl)
 {
 	_samplingDelay = dl;
 }
 
-IsnMsgConfig IsnConfigurationTemperature::getConfigMsg()
+IsnMsgConfig IsnConfiguration::getConfigMsg()
 {
 	IsnConfigParam params[_length];
 

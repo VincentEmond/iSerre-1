@@ -159,6 +159,7 @@ public:
   uint32_t getLsb();
   void    setMsb(uint32_t msb);
   void    setLsb(uint32_t lsb);
+  bool operator ==(const NWAddress64& other) const;
 private:
   uint32_t _msb;
   uint32_t _lsb;
