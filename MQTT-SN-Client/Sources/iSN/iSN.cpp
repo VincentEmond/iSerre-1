@@ -239,6 +239,9 @@ uint8_t IsnMessage::getType()
 IsnClientInfo::IsnClientInfo(NWAddress64 addr)
 {
 	_addr = addr;
+	this->_measure = 0.0;
+	this->_nbMissed = 0;
+	this->_newValue = false;
 }
 
 void IsnClientInfo::setClientAddress(NWAddress64 addr)

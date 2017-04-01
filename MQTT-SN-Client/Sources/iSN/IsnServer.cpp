@@ -94,19 +94,26 @@ void IsnServer::removeFromList(IsnClientInfo& info)
 //dead and removed from the list of sensors.
 void IsnServer::applyPenalties()
 {
-	vector<IsnClientInfo>::iterator it;
+	vector<IsnClientInfo>::iterator it = _lstClients.begin();
 
-	for (it = _lstClients.begin(); it !=_lstClients.end(); it++)
+	while (it != _lstClients.end())
 	{
 		if (!(it->isNewValue()))
 		{
 			uint8_t miss = it->getNbMissed();
 			miss++;
 			if (miss >= ISN_SERVER_CONFIG_MISS_LIMIT)
-				_lstClients.erase(it);
+			{
+				it = _lstClients.erase(it);
+			}
 			else
+			{
 				it->setNbMissed(miss);
+				it++;
+			}
 		}
+		else
+			it++;
 	}
 }
 
@@ -216,12 +223,15 @@ int IsnServer::sendRecvMsg()
 
 		measure = computeAverage();
 
-		if (measure != ISN_RC_INVALID_MEASURE)
+		//Need to check interval because of floating point precision error.
+		if (measure+10 < ISN_RC_INVALID_MEASURE)
 		{
 			char str[20] = {0};
 			ftoa(measure, str, 2);
 			_mqtt->publish(TOPIC_CAPTEUR, str, strlen(str), QOS1);
 		}
+
+		this->_publishTimer.start(ISN_SERVER_CONFIG_PUBLISH_DELAY * 1000);
 
 		_serverStatus = ISN_SERVERSTATE_IDLE;
 	}
@@ -289,8 +299,8 @@ IsnClientInfo* IsnServer::getClientInfo(NWAddress64& addr)
 
 float IsnServer::computeAverage()
 {
-	float total = 0.0;
-	uint8_t sum = 0;
+	uint8_t total = 0;
+	float sum = 0.0;
 
 	if (this->_lstClients.size() == 0)
 		return ISN_RC_INVALID_MEASURE;

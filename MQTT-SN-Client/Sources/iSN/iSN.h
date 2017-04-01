@@ -93,7 +93,7 @@ using namespace tomyClient;
 #define ISN_RC_NO_MESSAGE	0x01
 #define ISN_RC_NO_ERROR 	0x02
 #define ISN_RC_RETRY_OVER	0x03
-#define ISN_RC_INVALID_MEASURE 9999.99
+#define ISN_RC_INVALID_MEASURE 9999.0
 
 typedef void(*NetworkCallback)(tomyClient::NWResponse*, int*);
 

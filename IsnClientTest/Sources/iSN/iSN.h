@@ -59,7 +59,7 @@ using namespace tomyClient;
 
 //Amount of time before the client sends a ping to
 //the sink to make sure it is still connected.
-#define ISN_CLIENT_CONFIG_KEEP_ALIVE	600
+#define ISN_CLIENT_CONFIG_KEEP_ALIVE	10
 
 //Timeout du serveur en s
 
