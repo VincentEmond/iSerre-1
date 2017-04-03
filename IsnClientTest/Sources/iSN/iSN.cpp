@@ -346,4 +346,64 @@ IsnMsgConfig::IsnMsgConfig(IsnConfigParam* params, uint8_t count)
 	}
 }
 
+string getClientStatusString(int status)
+{
+
+	switch (status)
+	{
+	case ISN_CLIENTSTATE_NOT_CONNECTED:
+		return "ISN_CLIENTSTATE_NOT_CONNECTED";
+		break;
+	case ISN_CLIENSTATE_CONNECT_SENT:
+		return "ISN_CLIENSTATE_CONNECT_SENT";
+		break;
+	case ISN_CLIENTSTATE_CONNECTED:
+		return "ISN_CLIENTSTATE_CONNECTED";
+		break;
+	case ISN_CLIENTSTATE_SEARCH_SENT:
+		return "ISN_CLIENTSTATE_SEARCH_SENT";
+		break;
+	case ISN_CLIENTSTATE_SINK_FOUND:
+		return "ISN_CLIENTSTATE_SINK_FOUND";
+		break;
+	case ISN_CLIENTSTATE_CONFIG_RECEIVED:
+		return "ISN_CLIENTSTATE_CONFIG_RECEIVED";
+		break;
+	default:
+		return "";
+	}
+}
+
+string getMessageString(uint8_t message)
+{
+
+	switch (message)
+	{
+	case ISN_MSG_SEARCH_SINK:
+		return "ISN_MSG_SEARCH_SINK";
+	case ISN_MSG_SEARCH_SINK_ACK:
+		return "ISN_MSG_SEARCH_SINK_ACK";
+	case ISN_MSG_CONFIG:
+		return "ISN_MSG_CONFIG";
+	case ISN_MSG_COMMAND:
+		return "ISN_MSG_COMMAND";
+	case ISN_MSG_MEASURE:
+		return "ISN_MSG_MEASURE";
+	case ISN_MSG_CONNECT:
+		return "ISN_MSG_CONNECT";
+	case ISN_MSG_CONFIG_ACK:
+		return "ISN_MSG_CONFIG_ACK";
+	case ISN_MSG_NOT_CONNECTED:
+		return "ISN_MSG_NOT_CONNECTED";
+	case ISN_MSG_PING:
+		return "ISN_MSG_PING";
+	case ISN_MSG_PING_ACK:
+		return "ISN_MSG_PING_ACK";
+	default:
+		return "";
+	}
+}
+
+
+
 

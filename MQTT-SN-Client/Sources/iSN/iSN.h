@@ -17,6 +17,7 @@
 #include "utility/conversion.h"
 #include "mqttsn\mqttsnClientAppFw4kinetis.h"
 #include "IsnBuildConfig.h"
+#include <string>
 
 using namespace std;
 using namespace tomyClient;
@@ -336,6 +337,7 @@ private:
 	Queue<IsnMessage> _sendQueue;
 	IsnConfiguration* _config;
 	IsnClientInfo* getClientInfo(NWAddress64& addr);
+	void setState(int status);
 	bool isAlreadyInList(IsnClientInfo&);
 	bool allMeasuresArrived();
 	void sendMessage(IsnMessage message);
@@ -390,6 +392,11 @@ void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 
 static IsnServer* theIsnServer;
 static IsnClient* theIsnClient;
+
+string getClientStatusString(int status);
+string getMessageString(uint8_t message);
+string getServerStateString(int state);
+void printAddress(NWAddress64& addr);
 
 template<typename T> void writeDataToBuffer(T* data, uint8_t* buffer, int startIndex);
 

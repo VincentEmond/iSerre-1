@@ -122,7 +122,7 @@ void IsnServer::setAndSendConfiguration(IsnConfiguration* config)
 {
 	delete _config;
 	_config = config;
-	_serverStatus = ISN_SERVERSTATE_SEND_CONFIG;
+	setState(ISN_SERVERSTATE_SEND_CONFIG);
 }
 
 void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode)
@@ -158,13 +158,12 @@ int IsnServer::sendRecvMsg()
 		*/
 
 		if (this->_publishTimer.isTimeUp())
-			_serverStatus = ISN_SERVERSTATE_SEND_MEASURE;
+			setState(ISN_SERVERSTATE_SEND_MEASURE);
 
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_PING)
 	{
-		printf("ISN_SERVERSTATE_HANDLE_PING\n");
 
 		IsnClientInfo infos(_net->getGwAddress());
 		if (isAlreadyInList(infos))
@@ -174,14 +173,14 @@ int IsnServer::sendRecvMsg()
 
 		unicast();
 
-		_serverStatus = ISN_SERVERSTATE_IDLE;
+		setState(ISN_SERVERSTATE_IDLE);
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_CONNECT)
 	{
 		IsnClientInfo infos(_net->getGwAddress());
 
-		printf("ISN_SERVERSTATE_HANDLE_CONNECT\n");
+
 
 		sendConfig();
 		int rc = unicast();
@@ -192,21 +191,21 @@ int IsnServer::sendRecvMsg()
 				_lstClients.push_back(infos);
 		}
 
-		_serverStatus = ISN_SERVERSTATE_IDLE;
+		setState(ISN_SERVERSTATE_IDLE);
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_HANDLE_SEARCH)
 	{
-		printf("ISN_SERVERSTATE_HANDLE_SEARCH\n");
+
 
 		sendSearchAck();
 		unicast();
-		_serverStatus = ISN_SERVERSTATE_IDLE;
+		setState(ISN_SERVERSTATE_IDLE);
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_SEND_MEASURE)
 	{
-		printf("ISN_SERVERSTATE_SEND_MEASURE\n");
+
 		float measure;
 
 		if (!allMeasuresArrived())
@@ -233,14 +232,13 @@ int IsnServer::sendRecvMsg()
 
 		this->_publishTimer.start(ISN_SERVER_CONFIG_PUBLISH_DELAY * 1000);
 
-		_serverStatus = ISN_SERVERSTATE_IDLE;
+		setState(ISN_SERVERSTATE_IDLE);
 	}
 
 	else if (_serverStatus == ISN_SERVERSTATE_SEND_CONFIG)
 	{
-		printf("ISN_SERVERSTATE_SEND_CONFIG\n");
 		sendConfigToAll();
-		_serverStatus = ISN_SERVERSTATE_IDLE;
+		setState(ISN_SERVERSTATE_IDLE);
 	}
 
 	_net->readPacket();
@@ -297,6 +295,14 @@ IsnClientInfo* IsnServer::getClientInfo(NWAddress64& addr)
 		return NULL;
 }
 
+void IsnServer::setState(int status)
+{
+#ifdef ISN_DEBUG
+	printf((getServerStateString(_serverStatus) + " -> " + getServerStateString(status) + "\n").c_str());
+#endif
+	_serverStatus = status;
+}
+
 float IsnServer::computeAverage()
 {
 	uint8_t total = 0;
@@ -337,8 +343,19 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		sameAddress = _net->getGwAddress() == resp->getRemoteAddress64();
 
 
-	printf("Trame Recue:\n");
-	debugPrintPayload(resp);
+#ifdef ISN_DEBUG
+	//printf("Trame Recue:\n");
+	//debugPrintPayload(resp);
+	string msgStr = getMessageString(type);
+	if (msgStr != "")
+	{
+		printf(" (");
+		printAddress(resp->getRemoteAddress64());
+		printf(") ");
+		printf((msgStr).c_str());
+		printf("-> IsnServer\n");
+	}
+#endif
 
 
 
@@ -350,7 +367,7 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		if (dt == _deviceType)
 		{
 			_net->setGwAddress(resp->getRemoteAddress64());
-			_serverStatus = ISN_SERVERSTATE_HANDLE_SEARCH;
+			setState(ISN_SERVERSTATE_HANDLE_SEARCH);
 		}
 
 	}
@@ -367,7 +384,7 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	else if (type == ISN_MSG_CONNECT)
 	{
 		_net->setGwAddress(resp->getRemoteAddress64());
-		_serverStatus = ISN_SERVERSTATE_HANDLE_CONNECT;
+		setState(ISN_SERVERSTATE_HANDLE_CONNECT);
 	}
 
 	else if (type == ISN_MSG_MEASURE)
@@ -388,7 +405,7 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	else if (type == ISN_MSG_PING)
 	{
 		_net->setGwAddress(resp->getRemoteAddress64());
-		_serverStatus = ISN_SERVERSTATE_HANDLE_PING;
+		setState(ISN_SERVERSTATE_HANDLE_PING);
 	}
 }
 
@@ -440,11 +457,17 @@ int IsnServer::unicast()
 	    if (msg == NULL)
 	    	return ISN_RC_NO_MESSAGE;
 
-	    msg->printPayload();
-
 	    //Essaye d'envoyer le message pour le nombre de retry
 	    do
 	    {
+		#ifdef ISN_DEBUG
+			string msgString = getMessageString(msg->getType());
+			printf("(");
+			NWAddress64 nwref = _net->getGwAddress();
+			printAddress(nwref);
+			printf(") ");
+			printf((msgString + " <- UCast IsnServer\n").c_str());
+		#endif
 	    	_net->send(msg->getPayload(), msg->getLength() , UcastReq);
 
 	    	        _respTimer.start(msg->getTimeout() * 1000);
@@ -482,6 +505,10 @@ int IsnServer::broadcast()
     //Essaye d'envoyer le message pour le nombre de retry
     do
     {
+#ifdef ISN_DEBUG
+			string msgString = getMessageString(msg->getType());
+			printf((msgString + " <- BCast IsnServer\n").c_str());
+#endif
     	_net->send(msg->getPayload(), msg->getLength() , BcastReq);
 
     	        _respTimer.start(msg->getTimeout() * 1000);

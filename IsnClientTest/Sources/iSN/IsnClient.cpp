@@ -59,7 +59,6 @@ int IsnClient::sendRecvMsg()
 	//Si le client n'est pas connecté il faut envoyé un search sink
 	if (_clientStatus == ISN_CLIENTSTATE_NOT_CONNECTED)
 	{
-			debug_printf("ISN_CLIENTSTATE_NOT_CONNECTED\n");
 			//Ajoute search sink dans la file.
 			sendSearchSink();
 			//On remet l'adresse du sink a 0;
@@ -71,7 +70,7 @@ int IsnClient::sendRecvMsg()
 				//Si ont a toujours pas eu de reponse apres un certain nombre d'essais on revient
 				//dans l'etat non connecte
 				if (rc == ISN_RC_RETRY_OVER)
-					_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
+					setStatus(ISN_CLIENTSTATE_NOT_CONNECTED);
 				return rc;
 			}
 	}
@@ -79,7 +78,6 @@ int IsnClient::sendRecvMsg()
 	//What to do when a sink answered with a SEARCH_SINK_ACK
 	else if (_clientStatus == ISN_CLIENTSTATE_SINK_FOUND)
 	{
-		debug_printf("ISN_CLIENTSTATE_SINK_FOUND\n");
 		//Ajoute un message connect dans la file d'envoie
 		sendConnect();
 		rc = unicast();
@@ -88,7 +86,7 @@ int IsnClient::sendRecvMsg()
 			//Si ont a toujours pas eu de reponse apres un certain nombre d'essais on revient
 			//dans l'etat non connecte
 			if (rc == ISN_RC_RETRY_OVER)
-				_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
+				setStatus(ISN_CLIENTSTATE_NOT_CONNECTED);
 			return rc;
 		}
 	}
@@ -96,7 +94,6 @@ int IsnClient::sendRecvMsg()
 	//What to do when the CONFIG frame is received during the connection phase.
 	else if (_clientStatus == ISN_CLIENTSTATE_CONFIG_RECEIVED)
 	{
-		debug_printf("ISN_CLIENTSTATE_CONFIG_RECEIVED\n");
 		sendConfigAck();
 		unicast();
 
@@ -105,7 +102,7 @@ int IsnClient::sendRecvMsg()
 		//Start the keep alive timer.
 		this->_keepAliveTimer.start(ISN_CLIENT_CONFIG_KEEP_ALIVE * 1000);
 
-		_clientStatus = ISN_CLIENTSTATE_CONNECTED;
+		setStatus(ISN_CLIENTSTATE_CONNECTED);
 	}
 
 	else if (_clientStatus == ISN_CLIENTSTATE_CONNECTED)
@@ -129,7 +126,7 @@ int IsnClient::sendRecvMsg()
 			sendPing();
 			int rc = unicast();
 			if (rc == ISN_RC_RETRY_OVER)
-				_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
+				setStatus(ISN_CLIENTSTATE_NOT_CONNECTED);
 			else
 				this->_keepAliveTimer.start(ISN_CLIENT_CONFIG_KEEP_ALIVE * 1000);
 		}
@@ -159,8 +156,13 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 	//Get a pointer to the message in the front of the Send Queue or NULL if the Queue is empty
 	IsnMessage* msgSend = _sendQueue.frontP();
 
-	printf("Trame Recue:\n");
-	debugPrintPayload(resp);
+#ifdef ISN_DEBUG
+	//printf("Trame Recue:\n");
+	//debugPrintPayload(resp);
+	string msgStr = getMessageString(msgType);
+	if (msgStr != "")
+		printf((msgStr + " -> IsnClient\n").c_str());
+#endif
 
 	//If the client is connected and receive something from the sink then reset the keep alive timer
 	if (this->_clientStatus == ISN_CLIENTSTATE_CONNECTED)
@@ -180,7 +182,7 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		//Marque le message SEARCH_SINK comme traite
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
 		//Entre dans l'etat ou un sink a ete trouve
-		_clientStatus = ISN_CLIENTSTATE_SINK_FOUND;
+		setStatus(ISN_CLIENTSTATE_SINK_FOUND);
 	}
 
 	//Si on recoit un config suite a un connect et qu'on l'attend
@@ -206,7 +208,7 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 
 
 		//Entre dans l'etat CONNECTE
-		_clientStatus = ISN_CLIENTSTATE_CONFIG_RECEIVED;
+		setStatus(ISN_CLIENTSTATE_CONFIG_RECEIVED);
 	}
 
 	//Si on recoit un config et qu'on ne l'attend pas alors le serveur
@@ -238,7 +240,7 @@ void IsnClient::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 				&& msgSend->getType() == ISN_MSG_PING)
 	{
 		msgSend->setMessageStatus(ISN_MSG_STATUS_COMPLETE);
-		_clientStatus = ISN_CLIENTSTATE_NOT_CONNECTED;
+		setStatus(ISN_CLIENTSTATE_NOT_CONNECTED);
 	}
 
 }
@@ -247,20 +249,29 @@ void IsnClient::sendSearchSink()
 {
 	IsnMsgSearchSink msg(_deviceType);
 	sendMessage(msg);
-	_clientStatus = ISN_CLIENTSTATE_SEARCH_SENT;
+	setStatus(ISN_CLIENTSTATE_SEARCH_SENT);
 }
 
 void IsnClient::sendConnect()
 {
 	IsnMsgConnect message;
 	sendMessage(message);
-	_clientStatus = ISN_CLIENSTATE_CONNECT_SENT;
+	setStatus(ISN_CLIENSTATE_CONNECT_SENT);
 }
 
 void IsnClient::sendPing()
 {
 	IsnMsgPing ping;
 	sendMessage(ping);
+}
+
+void IsnClient::setStatus(int status)
+{
+
+#ifdef ISN_DEBUG
+	printf((getClientStatusString(_clientStatus) + " -> " + getClientStatusString(status) + "\n").c_str());
+#endif
+	_clientStatus = status;
 }
 
 void IsnClient::sendConfigAck()
@@ -281,11 +292,17 @@ int IsnClient::broadcast()
     if (msg == NULL)
     	return ISN_RC_NO_MESSAGE;
 
+
+
     nbRetry = msg->getRetry();
 
     //Essaye d'envoyer le message pour le nombre de retry
     do
     {
+		#ifdef ISN_DEBUG
+			string msgString = getMessageString(msg->getType());
+			printf((msgString + " <- BCast IsnClient\n").c_str());
+		#endif
     	_net->send(msg->getPayload(), msg->getLength() , BcastReq);
 
     			int time = msg->getTimeout();
@@ -324,6 +341,10 @@ int IsnClient::unicast()
 	    //Essaye d'envoyer le message pour le nombre de retry
 	    do
 	    {
+#ifdef ISN_DEBUG
+			string msgString = getMessageString(msg->getType());
+			printf((msgString + " <- UCast IsnClient\n").c_str());
+		#endif
 	    	_net->send(msg->getPayload(), msg->getLength() , UcastReq);
 
 	    	        _respTimer.start(msg->getTimeout() * 1000);

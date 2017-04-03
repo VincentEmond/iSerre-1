@@ -107,9 +107,7 @@ void networkRxCallback(NWResponse* data, int* returnCode)
 #ifdef SINK_TEMP
 
 int readTempFrame(){
-	debug_printf("reading...\n\r");
 	network.readPacket();
-	debug_printf("done\n\r");
 
 	if(measMgr.isAverageDone())
 	{
@@ -285,7 +283,6 @@ END_OF_SUBSCRIBE_LIST};
  *      Application setup
  *=================================================*/
  void setup(){
-	 debug_printf("start\n\r");
 	 network.initialize(theAppConfig.netCfg);
 #ifndef SINK_ACTI
 	 //network.setRxHandler(networkRxCallback);

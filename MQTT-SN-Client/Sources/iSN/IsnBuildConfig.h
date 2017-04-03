@@ -11,6 +11,7 @@
 #define SENSOR_TEMP
 //#define SENSOR_HUMI
 //#define ACTIVATOR_LED
+#define ISN_DEBUG
 
 
 #endif /* SOURCES_ISN_ISNBUILDCONFIG_H_ */

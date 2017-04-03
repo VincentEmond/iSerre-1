@@ -13,6 +13,7 @@
 #include "stdio.h"
 #include "string.h"
 #include <vector>
+#include <string>
 #include "IsnBuildConfig.h"
 
 using namespace std;
@@ -233,6 +234,7 @@ private:
 	vector<T> _list;
 };
 
+
 /*
  * Queue
  */
@@ -322,6 +324,8 @@ private:
 
 };
 
+
+
 class IsnClient
 {
 public:
@@ -341,6 +345,7 @@ private:
 	void sendConfigAck();
 	void sendConnect();
 	void sendPing();
+	void setStatus(int status);
 	int broadcast();
 	int unicast();
 	int sendRecvMsg();
@@ -355,6 +360,9 @@ private:
 
 void clientMessageHandler(tomyClient::NWResponse* resp, int* respCode);
 void serverMessageHandler(tomyClient::NWResponse* resp, int* respCode);
+
+string getClientStatusString(int status);
+string getMessageString(uint8_t message);
 
 static IsnServer* theIsnServer;
 static IsnClient* theIsnClient;

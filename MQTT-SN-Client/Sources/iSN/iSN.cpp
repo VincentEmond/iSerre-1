@@ -386,3 +386,78 @@ IsnMsgConfig::IsnMsgConfig(IsnConfigParam* params, uint8_t count)
  */
 
 
+string getMessageString(uint8_t message)
+{
+
+	switch (message)
+	{
+	case ISN_MSG_SEARCH_SINK:
+		return "ISN_MSG_SEARCH_SINK";
+	case ISN_MSG_SEARCH_SINK_ACK:
+		return "ISN_MSG_SEARCH_SINK_ACK";
+	case ISN_MSG_CONFIG:
+		return "ISN_MSG_CONFIG";
+	case ISN_MSG_COMMAND:
+		return "ISN_MSG_COMMAND";
+	case ISN_MSG_MEASURE:
+		return "ISN_MSG_MEASURE";
+	case ISN_MSG_CONNECT:
+		return "ISN_MSG_CONNECT";
+	case ISN_MSG_CONFIG_ACK:
+		return "ISN_MSG_CONFIG_ACK";
+	case ISN_MSG_NOT_CONNECTED:
+		return "ISN_MSG_NOT_CONNECTED";
+	case ISN_MSG_PING:
+		return "ISN_MSG_PING";
+	case ISN_MSG_PING_ACK:
+		return "ISN_MSG_PING_ACK";
+	default:
+		return "";
+	}
+}
+
+string getServerStateString(int state)
+{
+	switch (state)
+	{
+	case ISN_SERVERSTATE_IDLE:
+		return "ISN_SERVERSTATE_IDLE";
+	case ISN_SERVERSTATE_HANDLE_CONNECT:
+		return "ISN_SERVERSTATE_HANDLE_CONNECT";
+	case ISN_SERVERSTATE_HANDLE_SEARCH:
+		return "ISN_SERVERSTATE_HANDLE_SEARCH";
+	case ISN_SERVERSTATE_SEND_CONFIG:
+		return "ISN_SERVERSTATE_SEND_CONFIG";
+	case ISN_SERVERSTATE_SEND_MEASURE:
+		return "ISN_SERVERSTATE_SEND_MEASURE";
+	case ISN_SERVERSTATE_HANDLE_PING:
+		return "ISN_SERVERSTATE_HANDLE_PING";
+	default:
+		return "";
+	}
+}
+
+void printAddress(NWAddress64& addr)
+{
+	uint32_t msb = addr.getMsb();
+	uint32_t lsb = addr.getLsb();
+	uint8_t membuff[4];
+
+	memcpy(membuff, &msb, 4);
+
+	for (int i=0; i<4; i++)
+	{
+		printf("%02X", membuff[i]);
+		printf(" ");
+	}
+
+	memcpy(membuff, &lsb, 4);
+
+	for (int i=0; i<4; i++)
+	{
+		printf("%02X", membuff[i]);
+		printf(" ");
+	}
+}
+
+
