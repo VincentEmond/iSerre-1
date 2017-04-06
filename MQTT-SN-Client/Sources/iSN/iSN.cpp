@@ -259,11 +259,17 @@ IsnClientInfo::IsnClientInfo()
 	this->_measure = 0.0;
 	this->_nbMissed = 0;
 	this->_newValue = false;
+	this->_nbPub = 0;
 }
 
 float IsnClientInfo::getMeasure()
 {
 	return this->_measure;
+}
+
+uint32_t IsnClientInfo::getNbPub()
+{
+	return this->_nbPub;
 }
 
 bool IsnClientInfo::isNewValue()
@@ -276,6 +282,7 @@ uint8_t IsnClientInfo::getNbMissed()
 }
 void IsnClientInfo::setMeasure(float measure)
 {
+	this->_nbPub++;
 	this->_measure = measure;
 }
 void IsnClientInfo::setNewValue(bool newValue)

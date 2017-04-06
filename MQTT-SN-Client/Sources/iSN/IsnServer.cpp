@@ -305,7 +305,7 @@ void IsnServer::setState(int status)
 
 float IsnServer::computeAverage()
 {
-	uint8_t total = 0;
+	int total = 0;
 	float sum = 0.0;
 
 	if (this->_lstClients.size() == 0)
@@ -313,22 +313,41 @@ float IsnServer::computeAverage()
 
 	vector<IsnClientInfo>::iterator it;
 
+#ifdef ISN_DEBUG
+	printf("computeAverage() %2.2f", sum);
+#endif
+
 	for (it=this->_lstClients.begin(); it!=this->_lstClients.end(); it++)
 	{
 		//Only consider new values to compute the average. To ensure accuracy.
-		if (it->isNewValue())
+		if (it->isNewValue() && it->getNbPub() > 1)
 		{
 			total++;
-			sum+=it->getMeasure();
+			float m = it->getMeasure();
+
+#ifdef ISN_DEBUG
+			printf(" + %2.2f", m);
+#endif
+
+			sum+=m;
 			it->setNewValue(false);
 		}
 	}
 
 	//All measure are old values.
 	if (sum == 0)
+	{
+#ifdef ISN_DEBUG
+		printf(" = 0.0 \n");
+#endif
 		return ISN_RC_INVALID_MEASURE;
+	}
 
 	float average = sum / total;
+
+#ifdef ISN_DEBUG
+	printf(" = %2.2f / %d = %2.2f \n", sum, total, average);
+#endif
 
 	return average;
 }
@@ -353,7 +372,15 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		printAddress(resp->getRemoteAddress64());
 		printf(") ");
 		printf((msgStr).c_str());
-		printf("-> IsnServer\n");
+
+		if (type == ISN_MSG_MEASURE)
+		{
+			IsnMsgMeasure msg(resp->getPayload());
+			float measVal = msg.getMeasure();
+			printf("(%2.2f) -> IsnServer\n", measVal);
+		}
+		else
+			printf("-> IsnServer\n");
 	}
 #endif
 
