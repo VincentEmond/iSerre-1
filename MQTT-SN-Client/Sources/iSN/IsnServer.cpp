@@ -19,12 +19,12 @@ IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_typ
 	_mqtt = mqtt;
 
 
-#ifdef SENSOR_TEMP
+#ifdef SINK_TEMP
 	TOPIC_CAPTEUR = new MQString("iserre/temperature/capteur");
 	TOPIC_ACTION = 	new MQString("iserre/temperature/actionneur");
 	TOPIC_CONFIG = 	new MQString("iserre/temperature/config");
 #endif
-#ifdef SENSOR_HUMI
+#ifdef SINK_HUMI
 	TOPIC_CAPTEUR = new MQString("iserre/humidite/capteur");
 	TOPIC_ACTION = 	new MQString("iserre/humidite/actionneur");
 	TOPIC_CONFIG = 	new MQString("iserre/humidite/config");
@@ -322,15 +322,26 @@ float IsnServer::computeAverage()
 		//Only consider new values to compute the average. To ensure accuracy.
 		if (it->isNewValue() && it->getNbPub() > 1)
 		{
-			total++;
+
+
 			float m = it->getMeasure();
 
+#ifdef SINK_TEMP
+			if (m <= 80) {
+#endif
+
+			total++;
 #ifdef ISN_DEBUG
 			printf(" + %2.2f", m);
 #endif
 
 			sum+=m;
 			it->setNewValue(false);
+
+#ifdef SINK_TEMP
+			}
+#endif
+
 		}
 	}
 
