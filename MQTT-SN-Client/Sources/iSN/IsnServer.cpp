@@ -21,13 +21,9 @@ IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_typ
 
 #ifdef SINK_TEMP
 	TOPIC_CAPTEUR = new MQString("iserre/temperature/capteur");
-	TOPIC_ACTION = 	new MQString("iserre/temperature/actionneur");
-	TOPIC_CONFIG = 	new MQString("iserre/temperature/config");
 #endif
 #ifdef SINK_HUMI
 	TOPIC_CAPTEUR = new MQString("iserre/humidite/capteur");
-	TOPIC_ACTION = 	new MQString("iserre/humidite/actionneur");
-	TOPIC_CONFIG = 	new MQString("iserre/humidite/config");
 #endif
 #ifdef ACTIVATOR_LED
 	TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
