@@ -6,10 +6,11 @@
  */
 
 #include "iSN.h"
-#include "UART_Com0.h"
-#include "Capteur/FakeCapteur.h"
+#include "uart_xb.h"
 #include "IsnBuildConfig.h"
 #include <time.h>
+#include "Capteur/FakeCapteur.h"
+#include "utility/StringUtility.h"
 
 /*
  *	IsnClient
@@ -343,7 +344,15 @@ int IsnClient::unicast()
 	    {
 #ifdef ISN_DEBUG
 			string msgString = getMessageString(msg->getType());
-			printf((msgString + " <- UCast IsnClient\n").c_str());
+
+			if (msg->getType() == ISN_MSG_MEASURE)
+			{
+				IsnMsgMeasure* meas = static_cast<IsnMsgMeasure*>(msg);
+				float measVal = meas->getMeasure();
+				printf((msgString + " (%2.2f) <- UCast IsnClient\n").c_str(), measVal);
+			}
+			else
+				printf((msgString + " <- UCast IsnClient\n").c_str());
 		#endif
 	    	_net->send(msg->getPayload(), msg->getLength() , UcastReq);
 

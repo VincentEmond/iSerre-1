@@ -311,11 +311,13 @@ public:
 	void setMeasure(float measure);
 	void setNewValue(bool newValue);
 	void setNbMissed(uint8_t nbMissed);
+	uint32_t getNbPub();
 private:
 	NWAddress64 _addr;
 	uint8_t _nbMissed;
 	float _measure;
 	bool _newValue;
+	uint32_t _nbPub;
 };
 
 class IsnServer

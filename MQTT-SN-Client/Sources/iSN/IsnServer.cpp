@@ -19,15 +19,11 @@ IsnServer::IsnServer(Network* net, MqttsnClientApplication* mqtt, int device_typ
 	_mqtt = mqtt;
 
 
-#ifdef SENSOR_TEMP
+#ifdef SINK_TEMP
 	TOPIC_CAPTEUR = new MQString("iserre/temperature/capteur");
-	TOPIC_ACTION = 	new MQString("iserre/temperature/actionneur");
-	TOPIC_CONFIG = 	new MQString("iserre/temperature/config");
 #endif
-#ifdef SENSOR_HUMI
+#ifdef SINK_HUMI
 	TOPIC_CAPTEUR = new MQString("iserre/humidite/capteur");
-	TOPIC_ACTION = 	new MQString("iserre/humidite/actionneur");
-	TOPIC_CONFIG = 	new MQString("iserre/humidite/config");
 #endif
 #ifdef ACTIVATOR_LED
 	TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
@@ -305,7 +301,7 @@ void IsnServer::setState(int status)
 
 float IsnServer::computeAverage()
 {
-	uint8_t total = 0;
+	int total = 0;
 	float sum = 0.0;
 
 	if (this->_lstClients.size() == 0)
@@ -313,22 +309,52 @@ float IsnServer::computeAverage()
 
 	vector<IsnClientInfo>::iterator it;
 
+#ifdef ISN_DEBUG
+	printf("computeAverage() %2.2f", sum);
+#endif
+
 	for (it=this->_lstClients.begin(); it!=this->_lstClients.end(); it++)
 	{
 		//Only consider new values to compute the average. To ensure accuracy.
-		if (it->isNewValue())
+		if (it->isNewValue() && it->getNbPub() > 1)
 		{
+
+
+			float m = it->getMeasure();
+
+#ifdef SINK_TEMP
+			if (m <= 80) {
+#endif
+
 			total++;
-			sum+=it->getMeasure();
+#ifdef ISN_DEBUG
+			printf(" + %2.2f", m);
+#endif
+
+			sum+=m;
 			it->setNewValue(false);
+
+#ifdef SINK_TEMP
+			}
+#endif
+
 		}
 	}
 
 	//All measure are old values.
 	if (sum == 0)
+	{
+#ifdef ISN_DEBUG
+		printf(" = 0.0 \n");
+#endif
 		return ISN_RC_INVALID_MEASURE;
+	}
 
 	float average = sum / total;
+
+#ifdef ISN_DEBUG
+	printf(" = %2.2f / %d = %2.2f \n", sum, total, average);
+#endif
 
 	return average;
 }
@@ -353,7 +379,15 @@ void IsnServer::receiveMessageHandler(tomyClient::NWResponse* resp, int* respCod
 		printAddress(resp->getRemoteAddress64());
 		printf(") ");
 		printf((msgStr).c_str());
-		printf("-> IsnServer\n");
+
+		if (type == ISN_MSG_MEASURE)
+		{
+			IsnMsgMeasure msg(resp->getPayload());
+			float measVal = msg.getMeasure();
+			printf("(%2.2f) -> IsnServer\n", measVal);
+		}
+		else
+			printf("-> IsnServer\n");
 	}
 #endif
 

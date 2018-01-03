@@ -11,8 +11,6 @@
 #include "mqttsn/mqttsnClientAppFw4kinetis.h"
 #include "mqttsn/zbeeStack.h"
 #include "UART_Com1.h"
-#include "iSerre-SN.h"
-#include "SinkMeasureManager.h"
 #include "utility/StringUtility.h"
 #include "utility/StringUtilCpp.h"
 #include "iSN/iSN.h"
@@ -80,9 +78,6 @@ MQString* TOPIC_LED_ETAT = 		new MQString("iserre/led/etat");
 MQString* TOPIC_LED_INTENSITE = new MQString("iserre/led/intensite");
 MQString* TOPIC_LED_COULEUR = 	new MQString("iserre/led/couleur");
 
-#ifndef SINK_ACTI
-SinkMeasureManager measMgr(DEFAULT_MEASURE_NUMBER);
-#endif
 
 
 
@@ -92,31 +87,6 @@ SinkMeasureManager measMgr(DEFAULT_MEASURE_NUMBER);
 #ifndef SINK_ACTI
 void networkRxCallback(NWResponse* data, int* returnCode)
 {
-	if(data->getPayload(0) == iSN_FrameType_Measure)
-	{
-		float meas = 0.f;
-		convertBuffer2Float(&data->getPayload()[1], &meas);
-		debug_printf("measure = %.2f\n\r", meas);
-
-		measMgr.addMeasure(meas);
-	}
-	network.readPacket();
-}
-#endif
-
-#ifdef SINK_TEMP
-
-int readTempFrame(){
-	network.readPacket();
-
-	if(measMgr.isAverageDone())
-	{
-		char str[20] = {0};
-		ftoa(measMgr.getAverage(), str, 2);
-		PUBLISH(TOPIC_TEMP_CAPTEUR, str, strlen(str), QOS1);
-	}
-
-	return 0;
 }
 
 #endif
@@ -146,10 +116,6 @@ int readHumiFrame(){
 
 /*---------  Link Tasks to the Application ----------*/
 TASK_LIST = {
-
-#ifdef SINK_TEMP
-	{readTempFrame, DEFAULT_READ_FRAME_PERIOD},
-#endif
 
 #ifdef SINK_HUMI
 	{readHumiFrame, DEFAULT_READ_FRAME_PERIOD},

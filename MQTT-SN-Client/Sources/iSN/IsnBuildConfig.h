@@ -8,8 +8,8 @@
 #ifndef SOURCES_ISN_ISNBUILDCONFIG_H_
 #define SOURCES_ISN_ISNBUILDCONFIG_H_
 
-#define SENSOR_TEMP
-//#define SENSOR_HUMI
+#define SINK_TEMP
+//#define SINK_HUMI
 //#define ACTIVATOR_LED
 #define ISN_DEBUG
 

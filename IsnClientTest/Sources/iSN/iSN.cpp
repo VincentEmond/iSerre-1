@@ -5,6 +5,7 @@
  *      Author: Vincent
  */
 #include "iSN.h"
+#include "utility/conversion.h"
 
 inline uint8_t MSB16(int x)
 {
@@ -24,6 +25,12 @@ IsnMsgMeasure::IsnMsgMeasure(float m)
 	_buffer = new uint8_t[_length];
 	_buffer[0] = _type;
 	writeDataToBuffer<float>(&m,_buffer, 1);
+}
+
+float IsnMsgMeasure::getMeasure()
+{
+	float m = bytesToFloat(&(_buffer[1]));
+	return m;
 }
 
 IsnMsgConfigAck::IsnMsgConfigAck()
